@@ -1,0 +1,82 @@
+"use client";
+import React, { useState } from 'react';
+import { login } from '@/app/actions/auth';
+
+export default function LoginPage() {
+    const [username, setUsername] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!username) return;
+
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const result = await login(username);
+            if (result.success) {
+                window.location.href = result.redirect;
+            } else {
+                setError(result.error || 'Login failed');
+            }
+        } catch (err) {
+            setError('System error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <main style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            padding: '1rem'
+        }}>
+            <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '3rem 2rem', textAlign: 'center' }}>
+                <img
+                    src="https://www.villamarket.com/static/media/villa-logo.5d120fb3.png"
+                    alt="Villa Market"
+                    style={{ width: '180px', marginBottom: '2rem' }}
+                />
+
+                <h1 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Repair System</h1>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>เข้าสู่ระบบด้วยชื่อผู้ใช้งานประจำสาขา</p>
+
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                    <div style={{ textAlign: 'left' }}>
+                        <label style={{ color: '#fff', fontSize: '0.8rem', display: 'block', marginBottom: '0.4rem' }}>Username</label>
+                        <input
+                            type="text"
+                            className="input-glass"
+                            placeholder="เช่น admin หรือ user_1024"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+                        />
+                    </div>
+
+                    {error && <p style={{ color: 'var(--accent-danger)', fontSize: '0.85rem' }}>{error}</p>}
+
+                    <button
+                        type="submit"
+                        className="btn-primary"
+                        style={{ padding: '0.8rem', fontSize: '1rem', marginTop: '1rem' }}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'Login'}
+                    </button>
+                </form>
+
+                <div style={{ marginTop: '2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <p>สิทธิ์แอดมิน: admin</p>
+                    <p>สิทธิ์สาขา: รหัสสาขา (ต้องรัน seed ก่อน)</p>
+                </div>
+            </div>
+        </main>
+    );
+}

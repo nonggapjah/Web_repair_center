@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -69,7 +69,7 @@ async function main() {
         create: {
             Username: 'admin',
             Role: 'Admin',
-            BranchID: '1000' // ผูกกับสาขาสุขุมวิท 33 ไว้ก่อน
+            BranchID: '1000'
         }
     });
 
