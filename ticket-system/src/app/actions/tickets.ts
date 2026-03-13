@@ -49,7 +49,16 @@ export async function createTicket(formData: {
 export async function getBranchTickets(branchId: string) {
     return await prisma.repairTicket.findMany({
         where: { BranchID: branchId },
-        include: { User: true },
+        include: {
+            User: true,
+            History: {
+                orderBy: { Timestamp: 'desc' }
+            },
+            Comments: {
+                include: { User: true },
+                orderBy: { Timestamp: 'desc' }
+            }
+        },
         orderBy: { CreatedAt: 'desc' }
     });
 }
@@ -58,7 +67,14 @@ export async function getAllTickets() {
     return await prisma.repairTicket.findMany({
         include: {
             Branch: true,
-            User: true
+            User: true,
+            History: {
+                orderBy: { Timestamp: 'desc' }
+            },
+            Comments: {
+                include: { User: true },
+                orderBy: { Timestamp: 'desc' }
+            }
         },
         orderBy: { CreatedAt: 'desc' }
     });

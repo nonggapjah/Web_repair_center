@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { getAllTickets, updateTicketStatus } from '@/app/actions/tickets';
+import { logout } from '@/app/actions/auth';
 
-// สถานะการซ่อมบำรุง
 const statuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed", "Closed"];
 
 const translateStatus = (status: string) => {
@@ -18,6 +18,18 @@ const translateStatus = (status: string) => {
     }
 };
 
+const statusColor = (status: string) => {
+    switch (status) {
+        case 'Open': return '#3b82f6';
+        case 'On Process': return '#8b5cf6';
+        case 'Repairing': return '#f59e0b';
+        case 'Waiting Parts': return '#ef4444';
+        case 'Completed': return '#10b981';
+        case 'Closed': return '#64748b';
+        default: return '#64748b';
+    }
+};
+
 export default function AdminDashboard() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +41,10 @@ export default function AdminDashboard() {
         try {
             const data = await getAllTickets();
             setTickets(data);
+            if (selectedTicket) {
+                const updated = data.find(t => t.TicketID === selectedTicket.TicketID);
+                if (updated) setSelectedTicket(updated);
+            }
         } catch (error) {
             console.error("Fetch error:", error);
         } finally {
@@ -40,12 +56,16 @@ export default function AdminDashboard() {
         fetchTickets();
     }, []);
 
+    const handleLogout = async () => {
+        await logout();
+        window.location.href = '/login';
+    };
+
     const onDragEnd = async (result: DropResult) => {
         if (!result.destination) return;
         const { source, destination, draggableId } = result;
         if (source.droppableId === destination.droppableId) return;
 
-        // Optimistic Update
         const oldTickets = [...tickets];
         setTickets(prev => prev.map(t => {
             if (t.TicketID === draggableId) {
@@ -58,15 +78,16 @@ export default function AdminDashboard() {
         if (!updateResult.success) {
             setTickets(oldTickets);
             alert("ไม่สามารถอัปเดตสถานะได้");
+        } else {
+            fetchTickets();
         }
     };
 
     const handleUpdateStatus = async (id: string, newStatus: string) => {
         const result = await updateTicketStatus(id, newStatus, techNote);
         if (result.success) {
-            setSelectedTicket(null);
             setTechNote('');
-            fetchTickets();
+            await fetchTickets();
         } else {
             alert("เกิดข้อผิดพลาดในการอัปเดต");
         }
@@ -79,139 +100,193 @@ export default function AdminDashboard() {
 
     if (isLoading) return (
         <div style={{ textAlign: 'center', padding: '5rem' }}>
-            <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลทั้งหมด (Admin Mode)...</p>
+            <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลแอดมิน...</p>
         </div>
     );
 
     return (
-        <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '1600px', margin: '0 auto' }}>
-
-            {/* Header */}
-            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
-                <div>
-                    <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem', marginBottom: '0.2rem' }}>จัดการงานซ่อมบำรุง (Admin)</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>แอดมินสามารถดูและจัดการรายการแจ้งซ่อมได้จากทุกสาขา</p>
-                </div>
-                <div className="glass-panel" style={{ padding: '0.4rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                    <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>มุมมองบอร์ด</button>
-                    <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>มุมมองตาราง</button>
-                </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                {[
-                    { label: 'แจ้งซ่อมใหม่', value: tickets.filter(t => t.CurrentStatus === 'Open').length, color: 'var(--accent-secondary)' },
-                    { label: 'กำลังซ่อม', value: tickets.filter(t => ['On Process', 'Repairing'].includes(t.CurrentStatus)).length, color: 'var(--accent-primary)' },
-                    { label: 'รออะไหล่', value: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: 'var(--accent-warning)' },
-                    { label: 'รวมทั้งหมด', value: tickets.length, color: 'var(--text-muted)' },
-                ].map(stat => (
-                    <div key={stat.label} className="glass-panel" style={{ padding: '1.2rem', display: 'flex', flexDirection: 'column', borderLeft: `4px solid ${stat.color}` }}>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>{stat.label}</span>
-                        <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text-primary)' }}>{stat.value}</span>
+        <>
+            <main className="container" style={{ padding: '2rem 1rem', maxWidth: '1600px', margin: '0 auto' }}>
+                <div className="animate-fade-in">
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                        <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.9rem' }}>Logout</button>
                     </div>
-                ))}
-            </div>
 
-            {viewMode === 'kanban' ? (
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="responsive-table-container" style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
-                        {columns.map(col => (
-                            <div key={col.status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
-                                    <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>{translateStatus(col.status)}</h3>
-                                    <span style={{ background: 'rgba(30, 58, 138, 0.1)', color: 'var(--accent-primary)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '700' }}>
-                                        {col.items.length}
-                                    </span>
-                                </div>
-                                <Droppable droppableId={col.status}>
-                                    {(provided, snapshot) => (
-                                        <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: snapshot.isDraggingOver ? 'rgba(30, 58, 138, 0.03)' : 'rgba(0,0,0,0.02)', borderRadius: '16px', padding: '0.8rem', border: '1px dashed rgba(30, 58, 138, 0.1)' }}>
-                                            {col.items.map((ticket, index) => (
-                                                <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
-                                                    {(provided, snapshot) => (
-                                                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1rem', marginBottom: '0.8rem', background: '#fff', boxShadow: snapshot.isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : 'var(--shadow-sm)', ...provided.draggableProps.style }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                                                                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</span>
-                                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</span>
-                                                            </div>
-                                                            <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Product}</h4>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: 'rgba(30, 58, 138, 0.05)', borderRadius: '4px' }}>
-                                                                    {ticket.Branch?.BranchName || ticket.BranchID}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
+                    <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
+                        <div>
+                            <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem' }}>จัดการงานซ่อมบำรุง (Admin)</h1>
+                            <p style={{ color: 'var(--text-muted)' }}>รวมรายการแจ้งซ่อมจากทุกสาขา</p>
+                        </div>
+                        <div className="glass-panel" style={{ padding: '0.4rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
+                            <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
+                            <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+                        </div>
+                    </div>
+
+                    {viewMode === 'kanban' ? (
+                        <DragDropContext onDragEnd={onDragEnd}>
+                            <div className="responsive-table-container" style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
+                                {columns.map(col => (
+                                    <div key={col.status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
+                                            <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{translateStatus(col.status)}</h3>
+                                            <span style={{ background: 'rgba(30,58,138,0.1)', color: 'var(--accent-primary)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.8rem' }}>{col.items.length}</span>
                                         </div>
-                                    )}
-                                </Droppable>
+                                        <Droppable droppableId={col.status}>
+                                            {(provided, snapshot) => (
+                                                <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: snapshot.isDraggingOver ? 'rgba(30,58,138,0.03)' : 'rgba(0,0,0,0.02)', borderRadius: '16px', padding: '0.8rem' }}>
+                                                    {col.items.map((ticket, index) => (
+                                                        <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
+                                                            {(provided, snapshot) => (
+                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1rem', marginBottom: '0.8rem', background: '#fff', boxShadow: snapshot.isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : 'var(--shadow-sm)', ...provided.draggableProps.style }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                                                                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</span>
+                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</span>
+                                                                    </div>
+                                                                    <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Product}</h4>
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{ticket.Branch?.BranchName || ticket.BranchID}</div>
+                                                                </div>
+                                                            )}
+                                                        </Draggable>
+                                                    ))}
+                                                    {provided.placeholder}
+                                                </div>
+                                            )}
+                                        </Droppable>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </DragDropContext>
-            ) : (
-                <div className="glass-panel responsive-table-container" style={{ padding: '0', background: '#fff' }}>
-                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
-                        <thead style={{ background: 'rgba(30, 58, 138, 0.05)' }}>
-                            <tr>
-                                <th style={{ padding: '1rem', textAlign: 'left' }}>สถานะ</th>
-                                <th style={{ padding: '1rem', textAlign: 'left' }}>รหัสงาน</th>
-                                <th style={{ padding: '1rem', textAlign: 'left' }}>อุปกรณ์</th>
-                                <th style={{ padding: '1rem', textAlign: 'left' }}>สาขา</th>
-                                <th style={{ padding: '1rem', textAlign: 'right' }}>จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tickets.map(t => (
-                                <tr key={t.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                                    <td style={{ padding: '1rem' }}>
-                                        <span className={`badge`}>{translateStatus(t.CurrentStatus)}</span>
-                                    </td>
-                                    <td style={{ padding: '1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
-                                    <td style={{ padding: '1rem' }}>{t.Product}</td>
-                                    <td style={{ padding: '1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
-                                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                        <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                        </DragDropContext>
+                    ) : (
+                        <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
+                            <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: 'rgba(30,58,138,0.05)' }}>
+                                        <th style={{ padding: '1.2rem' }}>สถานะ</th>
+                                        <th style={{ padding: '1.2rem' }}>รหัส</th>
+                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
+                                        <th style={{ padding: '1.2rem' }}>สาขา</th>
+                                        <th style={{ padding: '1.2rem' }}>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tickets.map(t => (
+                                        <tr key={t.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }} className="hover-row">
+                                            <td style={{ padding: '1.1rem' }}>
+                                                <span className="badge" style={{ background: `${statusColor(t.CurrentStatus)}15`, color: statusColor(t.CurrentStatus) }}>{translateStatus(t.CurrentStatus)}</span>
+                                            </td>
+                                            <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
+                                            <td style={{ padding: '1.1rem' }}>{t.Product}</td>
+                                            <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
+                                            <td style={{ padding: '1.1rem' }}>
+                                                <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
-            )}
+            </main>
 
-            {/* Sidebar Drawer */}
+            {/* Modal Pop Up ตรงกลางหน้าจอ (Admin) - ย้ายมานอก main stack */}
             {selectedTicket && (
-                <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }} onClick={() => setSelectedTicket(null)}>
-                    <div style={{ width: 'min(500px, 100%)', background: '#fff', height: '100%', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()} className="animate-fade-in">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                            <h2 style={{ margin: 0 }}>ดำเนินการงาน #{selectedTicket.TicketID.substring(0, 8).toUpperCase()}</h2>
-                            <button onClick={() => setSelectedTicket(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
-                        </div>
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold' }}>อุปกรณ์ / สาขา</label>
-                            <p style={{ fontSize: '1.2rem', fontWeight: '600', margin: '0.2rem 0' }}>{selectedTicket.Product}</p>
-                            <span className="badge">{selectedTicket.Branch?.BranchName || selectedTicket.BranchID}</span>
-                        </div>
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold' }}>บันทึกจากช่าง</label>
-                            <textarea className="input-glass" style={{ marginTop: '0.5rem', minHeight: '120px', background: '#fff' }} placeholder="ระบุการดำเนินการ..." value={techNote} onChange={e => setTechNote(e.target.value)} />
-                        </div>
-                        <div style={{ marginTop: 'auto' }}>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>อัปเดตสถานะ:</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem' }}>
-                                {statuses.map(s => (
-                                    <button key={s} onClick={() => handleUpdateStatus(selectedTicket.TicketID, s)} className="badge" style={{ justifyContent: 'center', padding: '1rem', cursor: 'pointer', background: selectedTicket.CurrentStatus === s ? 'var(--accent-primary)' : 'rgba(30, 58, 138, 0.05)', color: selectedTicket.CurrentStatus === s ? '#fff' : 'var(--accent-primary)', border: '1px solid rgba(0,0,0,0.1)' }}>{translateStatus(s)}</button>
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1rem'
+                }} onClick={() => setSelectedTicket(null)}>
+                    <div style={{
+                        width: '100%',
+                        maxWidth: '850px',
+                        maxHeight: '90vh',
+                        background: '#fff',
+                        borderRadius: '30px',
+                        padding: '0',
+                        display: 'flex',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                        overflow: 'hidden'
+                    }} onClick={e => e.stopPropagation()}>
+
+                        {/* Detail Left */}
+                        <div style={{ flex: 1.2, padding: '2rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
+                                    <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Product}</h2>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
+                                </div>
+                                <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
+                            </div>
+
+                            <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1.2rem', borderRadius: '15px', marginBottom: '1.5rem' }}>
+                                <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รายละเอียดปัญหา:</label>
+                                <p style={{ marginTop: '0.4rem', fontSize: '0.95rem' }}>{selectedTicket.Description || '-'}</p>
+                            </div>
+
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>ประวัติการอัปเดต</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                {selectedTicket.History?.map((h: any, i: number) => (
+                                    <div key={h.HistoryID} style={{ display: 'flex', gap: '1rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: i === 0 ? 'var(--accent-primary)' : '#e2e8f0' }}></div>
+                                            {i < selectedTicket.History.length - 1 && <div style={{ width: '2px', flex: 1, background: '#f1f5f9', margin: '0.3rem 0' }}></div>}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(h.Timestamp).toLocaleString('th-TH')}</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{translateStatus(h.Status)}</div>
+                                            {h.Note && <div style={{ background: 'rgba(0,0,0,0.02)', padding: '0.6rem', borderRadius: '8px', fontSize: '0.85rem', marginTop: '0.2rem' }}>{h.Note}</div>}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
+
+                        {/* Control Right */}
+                        <div style={{ flex: 0.8, background: '#f8fafc', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>ดำเนินการ</h3>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ส่งข้อความถึงสาขา:</label>
+                                <textarea className="input-glass" style={{ background: '#fff', height: '100px', fontSize: '0.9rem' }} placeholder="ระบุความบันทึก..." value={techNote} onChange={e => setTechNote(e.target.value)} />
+                            </div>
+
+                            <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                                {statuses.map(s => (
+                                    <button
+                                        key={s}
+                                        onClick={() => handleUpdateStatus(selectedTicket.TicketID, s)}
+                                        style={{
+                                            padding: '0.7rem',
+                                            borderRadius: '10px',
+                                            border: '1px solid var(--accent-primary)',
+                                            background: selectedTicket.CurrentStatus === s ? 'var(--accent-primary)' : '#fff',
+                                            color: selectedTicket.CurrentStatus === s ? '#fff' : 'var(--accent-primary)',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.75rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {translateStatus(s)}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button onClick={() => setSelectedTicket(null)} style={{ marginTop: 'auto', padding: '1rem', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }}>ปิด</button>
+                        </div>
                     </div>
                 </div>
             )}
-        </main>
+        </>
     );
 }

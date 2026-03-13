@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createTicket } from '@/app/actions/tickets';
+import Link from 'next/link';
+import { Suspense } from 'react';
 
 const BRANCH_MAP: Record<string, string> = {
     "1000": "SUKHUMVIT 33",
@@ -10,8 +12,6 @@ const BRANCH_MAP: Record<string, string> = {
     "1024": "SAMMAKORN",
     "1030": "K-VILLAGE"
 };
-
-import { Suspense } from 'react';
 
 function NewTicketForm() {
     const searchParams = useSearchParams();
@@ -45,11 +45,6 @@ function NewTicketForm() {
         }
     };
 
-    const removeImage = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setImagePreview(null);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -80,7 +75,24 @@ function NewTicketForm() {
 
     return (
         <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+            <div style={{ marginBottom: '2rem', textAlign: 'center', position: 'relative' }}>
+                <Link href="/user/dashboard" style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    textDecoration: 'none',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.5rem 1rem',
+                    background: 'rgba(0,0,0,0.05)',
+                    borderRadius: '8px'
+                }}>
+                    <span>← กลับ</span>
+                </Link>
                 <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>ส่งคำขอแจ้งซ่อม</h1>
                 <p style={{ color: 'var(--text-muted)' }}>พนักงานสาขา {formData.branchId} ({BRANCH_MAP[formData.branchId] || 'Unknown Branch'})</p>
             </div>
@@ -112,11 +124,16 @@ function NewTicketForm() {
                     </div>
 
                     <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รายละเอียดปัญหา</label>
+                        <textarea className="input-glass" style={{ minHeight: '120px' }} placeholder="ระบุอาการเสียโดยละเอียด..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                    </div>
+
+                    <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รูปภาพหลักฐาน</label>
                         <div className="input-glass" style={{ minHeight: '150px', borderStyle: 'dashed', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => document.getElementById('fileUpload')?.click()}>
                             <input type="file" id="fileUpload" style={{ display: 'none' }} accept="image/*" onChange={handleImageChange} />
                             {imagePreview ? (
-                                <img src={imagePreview} style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }} />
+                                <img src={imagePreview} style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }} alt="Preview" />
                             ) : (
                                 <span>คลิกเพื่อแนบบรูปภาพ</span>
                             )}
@@ -125,7 +142,7 @@ function NewTicketForm() {
 
                     <div style={{ textAlign: 'right' }}>
                         <button type="submit" className="btn-primary" style={{ padding: '1rem 3rem' }} disabled={isSubmitting}>
-                            {isSubmitting ? 'กำลังส่ง...' : 'ส่งข้อมูล'}
+                            {isSubmitting ? 'กำลังส่ง...' : 'ส่งข้อมูลแจ้งซ่อม'}
                         </button>
                     </div>
                 </div>
@@ -141,4 +158,3 @@ export default function UserNewTicket() {
         </Suspense>
     );
 }
-
