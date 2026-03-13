@@ -11,7 +11,9 @@ const BRANCH_MAP: Record<string, string> = {
     "1030": "K-VILLAGE"
 };
 
-export default function UserNewTicket() {
+import { Suspense } from 'react';
+
+function NewTicketForm() {
     const searchParams = useSearchParams();
     const [formData, setFormData] = useState({
         product: '',
@@ -131,3 +133,12 @@ export default function UserNewTicket() {
         </main>
     );
 }
+
+export default function UserNewTicket() {
+    return (
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '5rem' }}>กำลังโหลดหน้าแบบฟอร์ม...</div>}>
+            <NewTicketForm />
+        </Suspense>
+    );
+}
+
