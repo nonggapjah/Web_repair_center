@@ -1,30 +1,49 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getBranchTickets } from '@/app/actions/tickets';
 
-// Dummy Data (ภาษาไทย)
-const myTickets = [
-    { id: "M-9021", product: "ตู้แช่แข็ง Walk-in #2", status: "Planed", date: "12 ต.ค., 10:30", desc: "อุณหภูมิสูงผิดปกติ (-5°C จากปกติ -18°C)" },
-    { id: "M-8954", product: "ฝ้าเพดาน - โซนผักสด", status: "Closed", date: "10 ต.ค., 14:15", desc: "น้ำรั่วหลังจากฝนตกหนักเมื่อคืน" },
-    { id: "M-9005", product: "เตาอบเบเกอรี่", status: "Completed", date: "05 ต.ค., 09:00", desc: "เปลี่ยนชุดฮีตเตอร์เรียบร้อย" }
-];
+// interface Ticket {
+//     TicketID: string;
+//     Product: string;
+//     CurrentStatus: string;
+//     CreatedAt: Date | string;
+//     Description: string | null;
+// }
 
 export default function UserTicketList() {
-    const [tickets, setTickets] = useState(myTickets);
+    const [tickets, setTickets] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [showCSAT, setShowCSAT] = useState<string | null>(null);
     const [rating, setRating] = useState(0);
+
+    useEffect(() => {
+        const fetchTickets = async () => {
+            try {
+                // สำหรับการทดสอบ ดึงข้อมูลจากสาขา V-PHROM
+                const data = await getBranchTickets('V-PHROM');
+                setTickets(data);
+            } catch (error) {
+                console.error("Fetch tickets error:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTickets();
+    }, []);
 
     const handleComplete = (id: string, success: boolean) => {
         if (success) {
             setShowCSAT(id);
         } else {
-            setTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'On Process' } : t));
+            setTickets(prev => prev.map(t => t.TicketID === id ? { ...t, CurrentStatus: 'On Process' } : t));
             alert("ส่งรายการกลับไปให้ทีมช่างดำเนินการใหม่");
         }
     };
 
     const submitCSAT = () => {
-        setTickets(prev => prev.map(t => t.id === showCSAT ? { ...t, status: 'Completed' } : t));
+        setTickets(prev => prev.map(t => t.TicketID === showCSAT ? { ...t, CurrentStatus: 'Completed' } : t));
         setShowCSAT(null);
         setRating(0);
         alert("บันทึกการประเมินความพึงพอใจเรียบร้อย แอดมินจะดำเนินการปิดตั๋วถาวรครับ");
@@ -43,6 +62,16 @@ export default function UserTicketList() {
         }
     };
 
+    const formatDate = (dateInput: any) => {
+        const date = new Date(dateInput);
+        return date.toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
     return (
         <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
@@ -55,60 +84,76 @@ export default function UserTicketList() {
                 </Link>
             </div>
 
-            <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
-                <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                        <tr style={{ background: 'rgba(30, 58, 138, 0.05)', borderBottom: '1px solid var(--border-glass)' }}>
-                            <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รหัส</th>
-                            <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>อุปกรณ์ / จุดที่เสีย</th>
-                            <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รายละเอียดปัญหา</th>
-                            <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>อัปเดตล่าสุด</th>
-                            <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>สถานะ</th>
-                            <th style={{ padding: '1.2rem', color: 'var(--text-secondary)', textAlign: 'right' }}>ดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tickets.map(ticket => (
-                            <tr key={ticket.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'background 0.2s' }} className="hover-row">
-                                <td style={{ padding: '1.2rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{ticket.id}</td>
-                                <td style={{ padding: '1.2rem', color: 'var(--text-primary)' }}>{ticket.product}</td>
-                                <td style={{ padding: '1.2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{ticket.desc}</td>
-                                <td style={{ padding: '1.2rem', color: 'var(--text-muted)' }}>{ticket.date}</td>
-                                <td style={{ padding: '1.2rem' }}>
-                                    <span className={`badge ${ticket.status === 'Planed' ? 'badge-planed' :
-                                        ticket.status === 'Closed' ? 'badge-closed' :
-                                            ticket.status === 'On Process' || ticket.status === 'Repairing' ? 'badge-onprocess' : 'badge-open'
-                                        }`}>
-                                        {translateStatus(ticket.status)}
-                                    </span>
-                                </td>
-                                <td style={{ padding: '1.2rem', textAlign: 'right' }}>
-                                    {ticket.status === 'Closed' ? (
-                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <button
-                                                onClick={() => handleComplete(ticket.id, true)}
-                                                className="badge"
-                                                style={{ border: '1px solid var(--accent-success)', cursor: 'pointer', background: 'var(--accent-success)', color: '#fff', padding: '0.4rem 0.8rem' }}
-                                            >
-                                                ยืนยันซ่อมเสร็จ
-                                            </button>
-                                            <button
-                                                onClick={() => handleComplete(ticket.id, false)}
-                                                className="badge"
-                                                style={{ border: '1px solid var(--accent-danger)', cursor: 'pointer', background: 'var(--accent-danger)', color: '#fff', padding: '0.4rem 0.8rem' }}
-                                            >
-                                                ยังเสียอยู่
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <span style={{ cursor: 'pointer', color: 'var(--accent-primary)', fontWeight: '500', fontSize: '0.9rem' }}>ดูรายละเอียด</span>
-                                    )}
-                                </td>
+            {isLoading ? (
+                <div style={{ textAlign: 'center', padding: '3rem' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</p>
+                </div>
+            ) : (
+                <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                            <tr style={{ background: 'rgba(30, 58, 138, 0.05)', borderBottom: '1px solid var(--border-glass)' }}>
+                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รหัส</th>
+                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>อุปกรณ์ / จุดที่เสีย</th>
+                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รายละเอียดปัญหา</th>
+                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>วันที่แจ้ง</th>
+                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>สถานะ</th>
+                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)', textAlign: 'right' }}>ดำเนินการ</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {tickets.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        ยังไม่มีรายการแจ้งซ่อมในขณะนี้
+                                    </td>
+                                </tr>
+                            ) : (
+                                tickets.map(ticket => (
+                                    <tr key={ticket.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'background 0.2s' }} className="hover-row">
+                                        <td style={{ padding: '1.2rem', fontWeight: '600', color: 'var(--accent-primary)' }}>
+                                            {ticket.TicketID.substring(0, 8).toUpperCase()}
+                                        </td>
+                                        <td style={{ padding: '1.1rem', color: 'var(--text-primary)', fontWeight: '500' }}>{ticket.Product}</td>
+                                        <td style={{ padding: '1.1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{ticket.Description || '-'}</td>
+                                        <td style={{ padding: '1.1rem', color: 'var(--text-muted)' }}>{formatDate(ticket.CreatedAt)}</td>
+                                        <td style={{ padding: '1.1rem' }}>
+                                            <span className={`badge ${ticket.CurrentStatus === 'Planed' ? 'badge-planed' :
+                                                    ticket.CurrentStatus === 'Closed' ? 'badge-closed' :
+                                                        ['On Process', 'Repairing', 'Waiting Parts'].includes(ticket.CurrentStatus) ? 'badge-onprocess' : 'badge-open'
+                                                }`}>
+                                                {translateStatus(ticket.CurrentStatus)}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1.1rem', textAlign: 'right' }}>
+                                            {ticket.CurrentStatus === 'Closed' ? (
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                    <button
+                                                        onClick={() => handleComplete(ticket.TicketID, true)}
+                                                        className="badge"
+                                                        style={{ border: '1px solid var(--accent-success)', cursor: 'pointer', background: 'var(--accent-success)', color: '#fff', padding: '0.4rem 0.8rem' }}
+                                                    >
+                                                        ยืนยันซ่อมเสร็จ
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleComplete(ticket.TicketID, false)}
+                                                        className="badge"
+                                                        style={{ border: '1px solid var(--accent-danger)', cursor: 'pointer', background: 'var(--accent-danger)', color: '#fff', padding: '0.4rem 0.8rem' }}
+                                                    >
+                                                        ยังเสียอยู่
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span style={{ cursor: 'pointer', color: 'var(--accent-primary)', fontWeight: '500', fontSize: '0.9rem' }}>ดูรายละเอียด</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* CSAT Modal */}
             {showCSAT && (
@@ -118,7 +163,7 @@ export default function UserTicketList() {
                 }}>
                     <div className="glass-panel animate-fade-in" style={{ width: '450px', textAlign: 'center', background: '#fff' }}>
                         <h2 style={{ color: 'var(--accent-primary)' }}>ประเมินการบริการ</h2>
-                        <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>คุณพอใจกับงานซ่อมอุปกรณ์ {showCSAT} มากน้อยเพียงใด?</p>
+                        <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>คุณพอใจกับงานซ่อมอุปกรณ์ {showCSAT.substring(0, 8)} มากน้อยเพียงใด?</p>
 
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
                             {[1, 2, 3, 4, 5].map(star => (

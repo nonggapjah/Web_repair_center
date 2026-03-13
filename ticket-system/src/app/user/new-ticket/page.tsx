@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import { createTicket } from '@/app/actions/tickets';
 
 export default function UserNewTicket() {
     const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function UserNewTicket() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -25,29 +27,41 @@ export default function UserNewTicket() {
     };
 
     const removeImage = (e: React.MouseEvent) => {
-        e.stopPropagation(); // ป้องกันการไป trigger click ของ parent div
+        e.stopPropagation();
         setImagePreview(null);
         const fileInput = document.getElementById('fileUpload') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
 
         // Validation
         if (!formData.product || !formData.symptom) {
             setError('กรุณาระบุอุปกรณ์และหมวดหมู่การซ่อมบำรุง');
+            setIsSubmitting(false);
             return;
         }
 
-        // Mock API Submit
-        setTimeout(() => {
-            setSuccess(true);
-            setFormData({ product: '', symptom: '', description: '', branchId: 'V-PHROM' });
-            setImagePreview(null);
-            setTimeout(() => setSuccess(false), 3000);
-        }, 1000);
+        try {
+            const result = await createTicket(formData);
+            if (result.success) {
+                setSuccess(true);
+                setFormData({ product: '', symptom: '', description: '', branchId: 'V-PHROM' });
+                setImagePreview(null);
+                setTimeout(() => {
+                    window.location.href = '/user/dashboard';
+                }, 1500);
+            } else {
+                setError(result.error || 'เกิดข้อผิดพลาดบางอย่าง');
+            }
+        } catch (err) {
+            setError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -66,7 +80,7 @@ export default function UserNewTicket() {
 
                 {success && (
                     <div style={{ padding: '1rem', background: 'rgba(16,185,129,0.1)', border: '1px solid var(--accent-success)', color: 'var(--accent-success)', borderRadius: 'var(--border-radius-sm)', marginBottom: '1.5rem' }}>
-                        ส่งข้อมูลแจ้งซ่อมเรียบร้อยแล้ว! รายการถูกส่งไปยังทีมช่างแล้ว
+                        ส่งข้อมูลแจ้งซ่อมเรียบร้อยแล้ว! ระบบกำลังพาคุณกลับไปยังหน้าแดชบอร์ด...
                     </div>
                 )}
 
@@ -143,7 +157,6 @@ export default function UserNewTicket() {
                             }}
                             onClick={() => document.getElementById('fileUpload')?.click()}
                         >
-                            {/* Input สำหรับอัปโหลดและเปิดกล้อง */}
                             <input
                                 type="file"
                                 id="fileUpload"
@@ -159,7 +172,6 @@ export default function UserNewTicket() {
                                         alt="Preview"
                                         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '8px' }}
                                     />
-                                    {/* ปุ่ม X สำหรับลบรูป */}
                                     <button
                                         onClick={removeImage}
                                         style={{
@@ -203,8 +215,13 @@ export default function UserNewTicket() {
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                    <button type="submit" className="btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.1rem' }}>
-                        ส่งข้อมูลแจ้งซ่อม
+                    <button
+                        type="submit"
+                        className="btn-primary"
+                        style={{ padding: '1rem 3rem', fontSize: '1.1rem', opacity: isSubmitting ? 0.7 : 1 }}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ส่งข้อมูลแจ้งซ่อม'}
                     </button>
                 </div>
             </form>
