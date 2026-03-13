@@ -15,7 +15,7 @@ export async function login(username: string, password?: string) {
         }
 
         // เช็ครหัสผ่าน (ใช้ข้อมูลจากที่สร้างใน MSSQL)
-        if (user.Password !== password) {
+        if ((user as any).Password !== password) {
             return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
         }
 

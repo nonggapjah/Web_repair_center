@@ -88,11 +88,8 @@ export default function LoginPage() {
                     </button>
                 </form>
 
-                <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'left' }}>
-                    <p style={{ fontWeight: 'bold', color: '#fff', marginBottom: '0.4rem' }}>คู่มือการเข้าใช้งาน:</p>
-                    <p>• Admin: admin / Villa@2026</p>
-                    <p>• สาขา: รหัสสาขา / villa@รหัสสาขา (เช่น 1024 / villa@1024)</p>
-                    <p style={{ marginTop: '0.4rem', color: 'var(--accent-warning)' }}>* ระบบจะสร้าง User สาขาให้อัตโนมัติเมื่อ Log-in ครั้งแรก</p>
+                <div style={{ marginTop: '2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    © 2024 Villa Market JP Co., Ltd.
                 </div>
             </div>
         </main>
