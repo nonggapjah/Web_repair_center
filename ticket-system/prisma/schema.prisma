@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model Branch {
+  BranchID   String         @id @default(cuid())
+  BranchName String
+  Users      User[]
+  Tickets    RepairTicket[]
+}
+
+model User {
+  UserID   String          @id @default(cuid())
+  Username String          @unique
+  Role     String          @default("User") // "User" or "Admin"
+  BranchID String
+  Branch   Branch          @relation(fields: [BranchID], references: [BranchID])
+  Tickets  RepairTicket[]
+  Comments TicketComment[]
+}
+
+model RepairTicket {
+  TicketID      String          @id @default(cuid())
+  UserID        String
+  User          User            @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
+  BranchID      String
+  Branch        Branch          @relation(fields: [BranchID], references: [BranchID], onDelete: NoAction, onUpdate: NoAction)
+  Product       String
+  Symptom       String
+  Description   String?
+  ImageURL      String?
+  Priority      String          @default("Medium") // "Low", "Medium", "High"
+  CurrentStatus String          @default("Planed") // Planed, Open, On Process, Waiting Parts, ETC, Rejected, Repairing, Closed, Completed
+  SLA_Deadline  DateTime?
+  TotalCost     Float?
+  CSAT_Score    Int?
+  CreatedAt     DateTime        @default(now())
+  History       TicketHistory[]
+  Comments      TicketComment[]
+}
+
+model TicketHistory {
+  HistoryID String       @id @default(cuid())
+  TicketID  String
+  Ticket    RepairTicket @relation(fields: [TicketID], references: [TicketID])
+  Status    String
+  UpdatedBy String
+  Note      String?
+  Timestamp DateTime     @default(now())
+}
+
+model TicketComment {
+  CommentID String       @id @default(cuid())
+  TicketID  String
+  Ticket    RepairTicket @relation(fields: [TicketID], references: [TicketID], onDelete: NoAction, onUpdate: NoAction)
+  UserID    String
+  User      User         @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
+  Message   String
+  Timestamp DateTime     @default(now())
+}
