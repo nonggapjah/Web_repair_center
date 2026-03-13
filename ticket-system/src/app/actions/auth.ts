@@ -2,8 +2,9 @@
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 
-export async function login(username: string) {
+export async function login(username: string, password?: string) {
     try {
+        // ค้นหาผู้ใช้งานจากฐานข้อมูล MSSQL โดยตรง
         const user = await prisma.user.findFirst({
             where: { Username: username },
             include: { Branch: true }
@@ -13,7 +14,11 @@ export async function login(username: string) {
             return { success: false, error: "ไม่พบชื่อผู้ใช้งานนี้ในระบบ" };
         }
 
-        // เก็บ session ง่ายๆ ใน cookie (ในระบบจริงควรใช้ JWT หรือ NextAuth)
+        // เช็ครหัสผ่าน (ใช้ข้อมูลจากที่สร้างใน MSSQL)
+        if (user.Password !== password) {
+            return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
+        }
+
         const sessionData = JSON.stringify({
             userId: user.UserID,
             username: user.Username,
@@ -37,7 +42,7 @@ export async function login(username: string) {
         };
     } catch (error) {
         console.error("Login error:", error);
-        return { success: false, error: "เกิดข้อผิดพลาดในการเชื่อมต่อ" };
+        return { success: false, error: "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล" };
     }
 }
 

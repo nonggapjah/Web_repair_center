@@ -15,13 +15,15 @@ model Branch {
 }
 
 model User {
-  UserID   String          @id @default(cuid())
-  Username String          @unique
-  Role     String          @default("User") // "User" or "Admin"
-  BranchID String
-  Branch   Branch          @relation(fields: [BranchID], references: [BranchID])
-  Tickets  RepairTicket[]
-  Comments TicketComment[]
+  UserID     String          @id @default(uuid())
+  Username   String          @unique
+  Password   String          @default("1234") // รหัสผ่านเริ่มต้น
+  Role       String          @default("User") // Admin, User, Tech
+  BranchID   String
+  Branch     Branch          @relation(fields: [BranchID], references: [BranchID])
+  Tickets    RepairTicket[]
+  Comments   TicketComment[]
+  CreatedAt  DateTime        @default(now())
 }
 
 model RepairTicket {

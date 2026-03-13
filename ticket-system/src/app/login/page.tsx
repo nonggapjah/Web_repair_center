@@ -4,18 +4,22 @@ import { login } from '@/app/actions/auth';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!username) return;
+        if (!username || !password) {
+            setError('กรุณาระบุชื่อผู้ใช้งานและรหัสผ่าน');
+            return;
+        }
 
         setIsLoading(true);
         setError('');
 
         try {
-            const result = await login(username);
+            const result = await login(username, password);
             if (result.success && result.redirect) {
                 window.location.href = result.redirect;
             } else {
@@ -45,17 +49,29 @@ export default function LoginPage() {
                 />
 
                 <h1 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Repair System</h1>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>เข้าสู่ระบบด้วยชื่อผู้ใช้งานประจำสาขา</p>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>เข้าสู่ระบบด้วยรหัสสาขาของคุณ</p>
 
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                     <div style={{ textAlign: 'left' }}>
-                        <label style={{ color: '#fff', fontSize: '0.8rem', display: 'block', marginBottom: '0.4rem' }}>Username</label>
+                        <label style={{ color: '#fff', fontSize: '0.8rem', display: 'block', marginBottom: '0.4rem' }}>ชื่อผู้ใช้งาน (รหัสสาขา / admin)</label>
                         <input
                             type="text"
                             className="input-glass"
-                            placeholder="เช่น admin หรือ user_1024"
+                            placeholder="เช่น 1024 หรือ admin"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
+                            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+                        />
+                    </div>
+
+                    <div style={{ textAlign: 'left' }}>
+                        <label style={{ color: '#fff', fontSize: '0.8rem', display: 'block', marginBottom: '0.4rem' }}>รหัสผ่าน</label>
+                        <input
+                            type="password"
+                            className="input-glass"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                             style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
                         />
                     </div>
@@ -68,13 +84,15 @@ export default function LoginPage() {
                         style={{ padding: '0.8rem', fontSize: '1rem', marginTop: '1rem' }}
                         disabled={isLoading}
                     >
-                        {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'Login'}
+                        {isLoading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
                     </button>
                 </form>
 
-                <div style={{ marginTop: '2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    <p>สิทธิ์แอดมิน: admin</p>
-                    <p>สิทธิ์สาขา: รหัสสาขา (ต้องรัน seed ก่อน)</p>
+                <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'left' }}>
+                    <p style={{ fontWeight: 'bold', color: '#fff', marginBottom: '0.4rem' }}>คู่มือการเข้าใช้งาน:</p>
+                    <p>• Admin: admin / Villa@2026</p>
+                    <p>• สาขา: รหัสสาขา / villa@รหัสสาขา (เช่น 1024 / villa@1024)</p>
+                    <p style={{ marginTop: '0.4rem', color: 'var(--accent-warning)' }}>* ระบบจะสร้าง User สาขาให้อัตโนมัติเมื่อ Log-in ครั้งแรก</p>
                 </div>
             </div>
         </main>

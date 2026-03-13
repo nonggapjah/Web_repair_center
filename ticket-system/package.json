@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma db push && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "node src/lib/seed.ts"
+  },
+  "prisma": {
+    "seed": "node src/lib/seed.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

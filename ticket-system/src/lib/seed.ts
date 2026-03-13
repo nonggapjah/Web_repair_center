@@ -65,9 +65,10 @@ async function main() {
     // สร้าง Admin Account ไว้ใช้งานเบื้องต้น
     await prisma.user.upsert({
         where: { Username: 'admin' },
-        update: {},
+        update: { Password: 'Villa@2026' },
         create: {
             Username: 'admin',
+            Password: 'Villa@2026',
             Role: 'Admin',
             BranchID: '1000'
         }
