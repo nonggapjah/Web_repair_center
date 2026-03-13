@@ -3,25 +3,35 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getBranchTickets } from '@/app/actions/tickets';
 
-// interface Ticket {
-//     TicketID: string;
-//     Product: string;
-//     CurrentStatus: string;
-//     CreatedAt: Date | string;
-//     Description: string | null;
-// }
+const BRANCH_LIST = [
+    { code: "1000", name: "SUKHUMVIT 33" },
+    { code: "1003", name: "NICHADA" },
+    { code: "1005", name: "SUKHUMVIT 49" },
+    { code: "1024", name: "SAMMAKORN" },
+    { code: "1030", name: "K-VILLAGE" }
+];
 
 export default function UserTicketList() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentBranch, setCurrentBranch] = useState<string | null>(null);
     const [showCSAT, setShowCSAT] = useState<string | null>(null);
     const [rating, setRating] = useState(0);
 
+    // จำลองการดึงสาขาจาก User Profile (ในที่นี้ใช้ localStorage เพื่อการทดสอบ)
     useEffect(() => {
+        const storedBranch = localStorage.getItem('userBranchId') || '1024';
+        setCurrentBranch(storedBranch);
+    }, []);
+
+    useEffect(() => {
+        if (!currentBranch) return;
+
         const fetchTickets = async () => {
+            setIsLoading(true);
             try {
-                // สำหรับการทดสอบ ดึงข้อมูลจากสาขา V-PHROM
-                const data = await getBranchTickets('V-PHROM');
+                // ดึงเฉพาะข้อมูลของสาขาตัวเองเท่านั้น (เงื่อนไข User เห็นแค่สาขาตัวเอง)
+                const data = await getBranchTickets(currentBranch);
                 setTickets(data);
             } catch (error) {
                 console.error("Fetch tickets error:", error);
@@ -31,121 +41,85 @@ export default function UserTicketList() {
         };
 
         fetchTickets();
-    }, []);
+    }, [currentBranch]);
 
-    const handleComplete = (id: string, success: boolean) => {
-        if (success) {
-            setShowCSAT(id);
-        } else {
-            setTickets(prev => prev.map(t => t.TicketID === id ? { ...t, CurrentStatus: 'On Process' } : t));
-            alert("ส่งรายการกลับไปให้ทีมช่างดำเนินการใหม่");
-        }
-    };
-
-    const submitCSAT = () => {
-        setTickets(prev => prev.map(t => t.TicketID === showCSAT ? { ...t, CurrentStatus: 'Completed' } : t));
-        setShowCSAT(null);
-        setRating(0);
-        alert("บันทึกการประเมินความพึงพอใจเรียบร้อย แอดมินจะดำเนินการปิดตั๋วถาวรครับ");
+    const handleSwitchBranch = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newBranch = e.target.value;
+        setCurrentBranch(newBranch);
+        localStorage.setItem('userBranchId', newBranch);
     };
 
     const translateStatus = (status: string) => {
         switch (status) {
-            case 'Planed': return 'รอดำเนินการ';
-            case 'Open': return 'เปิดงานแล้ว';
-            case 'On Process': return 'กำลังดำเนินการ';
+            case 'Open': return 'แจ้งซ่อมใหม่';
+            case 'On Process': return 'รับเรื่องแล้ว';
             case 'Repairing': return 'กำลังซ่อม';
             case 'Waiting Parts': return 'รออะไหล่';
-            case 'Closed': return 'ซ่อมเสร็จแล้ว';
-            case 'Completed': return 'จบงานสมบูรณ์';
+            case 'Completed': return 'ซ่อมเรียบร้อย';
+            case 'Closed': return 'ปิดงานถาวร';
             default: return status;
         }
     };
 
-    const formatDate = (dateInput: any) => {
-        const date = new Date(dateInput);
-        return date.toLocaleDateString('th-TH', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
     return (
         <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
+
+            {/* ส่วนเลือกสาขา (จำลองการสลับ User เพื่อทดสอบเงื่อนไข) */}
+            <div className="glass-panel" style={{ padding: '1rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(59, 130, 246, 0.05)' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>จำลองการล็อกอินสาขา:</span>
+                <select
+                    value={currentBranch || ''}
+                    onChange={handleSwitchBranch}
+                    className="input-glass"
+                    style={{ padding: '0.4rem', width: 'auto', border: '1px solid var(--accent-primary)' }}
+                >
+                    {BRANCH_LIST.map(b => (
+                        <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
+                    ))}
+                </select>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>* ในระบบจริงจะล็อกตามโปรไฟล์ผู้ใช้</p>
+            </div>
+
             <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
                 <div>
-                    <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>รายการแจ้งซ่อมของสาขา</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>สาขาพรมพงษ์ (V-PHROM - 024) | ติดตามสถานะและยืนยันการซ่อมบำรุง</p>
+                    <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>รายการแจ้งซ่อม {currentBranch}</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>ติดตามสถานะเฉพาะรายการของสาขาคุณเท่านั้น</p>
                 </div>
-                <Link href="/user/new-ticket" style={{ textDecoration: 'none' }}>
-                    <span className="btn-primary" style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>+ แจ้งซ่อมรายการใหม่</span>
+                <Link href={`/user/new-ticket?branchId=${currentBranch}`} style={{ textDecoration: 'none' }}>
+                    <span className="btn-primary" style={{ display: 'inline-block' }}>+ แจ้งซ่อมรายการใหม่</span>
                 </Link>
             </div>
 
             {isLoading ? (
                 <div style={{ textAlign: 'center', padding: '3rem' }}>
-                    <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</p>
+                    <p style={{ color: 'var(--text-muted)' }}>กำลังดึงข้อมูลสาขา {currentBranch}...</p>
                 </div>
             ) : (
                 <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
                     <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(30, 58, 138, 0.05)', borderBottom: '1px solid var(--border-glass)' }}>
-                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รหัส</th>
-                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>อุปกรณ์ / จุดที่เสีย</th>
-                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รายละเอียดปัญหา</th>
-                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>วันที่แจ้ง</th>
-                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>สถานะ</th>
-                                <th style={{ padding: '1.2rem', color: 'var(--text-secondary)', textAlign: 'right' }}>ดำเนินการ</th>
+                                <th style={{ padding: '1.2rem' }}>รหัส</th>
+                                <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
+                                <th style={{ padding: '1.2rem' }}>รายละเอียด</th>
+                                <th style={{ padding: '1.2rem' }}>อัปเดต</th>
+                                <th style={{ padding: '1.2rem' }}>สถานะ</th>
                             </tr>
                         </thead>
                         <tbody>
                             {tickets.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        ยังไม่มีรายการแจ้งซ่อมในขณะนี้
-                                    </td>
+                                    <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>ยังไม่มีรายการแจ้งซ่อมของสาขานี้</td>
                                 </tr>
                             ) : (
                                 tickets.map(ticket => (
-                                    <tr key={ticket.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'background 0.2s' }} className="hover-row">
-                                        <td style={{ padding: '1.2rem', fontWeight: '600', color: 'var(--accent-primary)' }}>
-                                            {ticket.TicketID.substring(0, 8).toUpperCase()}
-                                        </td>
-                                        <td style={{ padding: '1.1rem', color: 'var(--text-primary)', fontWeight: '500' }}>{ticket.Product}</td>
-                                        <td style={{ padding: '1.1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{ticket.Description || '-'}</td>
-                                        <td style={{ padding: '1.1rem', color: 'var(--text-muted)' }}>{formatDate(ticket.CreatedAt)}</td>
-                                        <td style={{ padding: '1.1rem' }}>
-                                            <span className={`badge ${ticket.CurrentStatus === 'Planed' ? 'badge-planed' :
-                                                    ticket.CurrentStatus === 'Closed' ? 'badge-closed' :
-                                                        ['On Process', 'Repairing', 'Waiting Parts'].includes(ticket.CurrentStatus) ? 'badge-onprocess' : 'badge-open'
-                                                }`}>
-                                                {translateStatus(ticket.CurrentStatus)}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1.1rem', textAlign: 'right' }}>
-                                            {ticket.CurrentStatus === 'Closed' ? (
-                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                    <button
-                                                        onClick={() => handleComplete(ticket.TicketID, true)}
-                                                        className="badge"
-                                                        style={{ border: '1px solid var(--accent-success)', cursor: 'pointer', background: 'var(--accent-success)', color: '#fff', padding: '0.4rem 0.8rem' }}
-                                                    >
-                                                        ยืนยันซ่อมเสร็จ
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleComplete(ticket.TicketID, false)}
-                                                        className="badge"
-                                                        style={{ border: '1px solid var(--accent-danger)', cursor: 'pointer', background: 'var(--accent-danger)', color: '#fff', padding: '0.4rem 0.8rem' }}
-                                                    >
-                                                        ยังเสียอยู่
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <span style={{ cursor: 'pointer', color: 'var(--accent-primary)', fontWeight: '500', fontSize: '0.9rem' }}>ดูรายละเอียด</span>
-                                            )}
+                                    <tr key={ticket.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }} className="hover-row">
+                                        <td style={{ padding: '1.2rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{ticket.TicketID.substring(0, 8).toUpperCase()}</td>
+                                        <td style={{ padding: '1.2rem' }}>{ticket.Product}</td>
+                                        <td style={{ padding: '1.2rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{ticket.Description || '-'}</td>
+                                        <td style={{ padding: '1.2rem' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</td>
+                                        <td style={{ padding: '1.2rem' }}>
+                                            <span className="badge">{translateStatus(ticket.CurrentStatus)}</span>
                                         </td>
                                     </tr>
                                 ))
@@ -154,49 +128,6 @@ export default function UserTicketList() {
                     </table>
                 </div>
             )}
-
-            {/* CSAT Modal */}
-            {showCSAT && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
-                }}>
-                    <div className="glass-panel animate-fade-in" style={{ width: '450px', textAlign: 'center', background: '#fff' }}>
-                        <h2 style={{ color: 'var(--accent-primary)' }}>ประเมินการบริการ</h2>
-                        <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>คุณพอใจกับงานซ่อมอุปกรณ์ {showCSAT.substring(0, 8)} มากน้อยเพียงใด?</p>
-
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
-                            {[1, 2, 3, 4, 5].map(star => (
-                                <span
-                                    key={star}
-                                    onClick={() => setRating(star)}
-                                    style={{
-                                        fontSize: '2.5rem', cursor: 'pointer',
-                                        color: star <= rating ? 'var(--accent-warning)' : '#e2e8f0',
-                                        transition: 'transform 0.1s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    ★
-                                </span>
-                            ))}
-                        </div>
-
-                        <div className="flex gap-4">
-                            <button className="btn-primary" style={{ flex: 1 }} onClick={submitCSAT}>ส่งผลการประเมิน</button>
-                            <button className="input-glass" style={{ flex: 1, color: 'var(--text-primary)' }} onClick={() => setShowCSAT(null)}>ยกเลิก</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .hover-row:hover {
-                    background: rgba(30, 58, 138, 0.02);
-                }
-            `}} />
         </main>
     );
 }

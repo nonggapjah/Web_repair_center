@@ -9,17 +9,15 @@ export async function createTicket(formData: {
     branchId: string;
 }) {
     try {
-        // ในระบบจริงต้องดึง UserID จาก Session นะครับ
-        // สำหรับตอนนี้ดึง User คนแรกจากสาขามาเป็นคนแจ้งก่อนครับ
+        // ในระบบจริงต้องดึง UserID จาก Session
         let user = await prisma.user.findFirst({
-            where: { BranchID: formData.branchId }
+            where: { BranchID: formData.branchId, Role: 'User' }
         });
 
         if (!user) {
-            // ถ้าไม่มี User ในสาขาเลย ให้สร้างขึ้นมา 1 คน (เพื่อการทดสอบ)
             user = await prisma.user.create({
                 data: {
-                    Username: `staff_${formData.branchId.toLowerCase()}`,
+                    Username: `staff_${formData.branchId}`,
                     BranchID: formData.branchId,
                     Role: 'User'
                 }
@@ -33,7 +31,7 @@ export async function createTicket(formData: {
                 Description: formData.description,
                 BranchID: formData.branchId,
                 UserID: user.UserID,
-                CurrentStatus: 'Planed',
+                CurrentStatus: 'Open',
                 Priority: 'Medium'
             }
         });
@@ -44,20 +42,50 @@ export async function createTicket(formData: {
         return { success: true, ticketId: ticket.TicketID };
     } catch (error) {
         console.error("Create ticket error:", error);
-        return { success: false, error: "ไม่สามารถส่งข้อมูลแจ้งซ่อมได้ โปรดตรวจสอบการเชื่อมต่อฐานข้อมูล" };
+        return { success: false, error: "ไม่สามารถส่งข้อมูลแจ้งซ่อมได้" };
     }
 }
 
 export async function getBranchTickets(branchId: string) {
     return await prisma.repairTicket.findMany({
         where: { BranchID: branchId },
+        include: { User: true },
         orderBy: { CreatedAt: 'desc' }
     });
 }
 
 export async function getAllTickets() {
     return await prisma.repairTicket.findMany({
-        include: { Branch: true },
+        include: {
+            Branch: true,
+            User: true
+        },
         orderBy: { CreatedAt: 'desc' }
     });
+}
+
+export async function updateTicketStatus(ticketId: string, status: string, note?: string) {
+    try {
+        await prisma.repairTicket.update({
+            where: { TicketID: ticketId },
+            data: { CurrentStatus: status }
+        });
+
+        // บันทึกประวัติ
+        await prisma.ticketHistory.create({
+            data: {
+                TicketID: ticketId,
+                Status: status,
+                Note: note,
+                UpdatedBy: 'Admin' // ในระบบจริงใช้ UserID จาก Session
+            }
+        });
+
+        revalidatePath('/user/dashboard');
+        revalidatePath('/admin/dashboard');
+        return { success: true };
+    } catch (error) {
+        console.error("Update ticket error:", error);
+        return { success: false };
+    }
 }
