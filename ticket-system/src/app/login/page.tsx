@@ -16,7 +16,7 @@ export default function LoginPage() {
 
         try {
             const result = await login(username);
-            if (result.success) {
+            if (result.success && result.redirect) {
                 window.location.href = result.redirect;
             } else {
                 setError(result.error || 'Login failed');
