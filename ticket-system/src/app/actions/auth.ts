@@ -22,7 +22,8 @@ export async function login(username: string) {
             branchName: user.Branch?.BranchName || ""
         });
 
-        cookies().set("user_session", sessionData, {
+        const cookieStore = await cookies();
+        cookieStore.set("user_session", sessionData, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             maxAge: 60 * 60 * 24, // 1 วัน
@@ -41,11 +42,13 @@ export async function login(username: string) {
 }
 
 export async function logout() {
-    cookies().delete("user_session");
+    const cookieStore = await cookies();
+    cookieStore.delete("user_session");
 }
 
 export async function getSession() {
-    const session = cookies().get("user_session");
+    const cookieStore = await cookies();
+    const session = cookieStore.get("user_session");
     if (!session) return null;
     try {
         return JSON.parse(session.value);
