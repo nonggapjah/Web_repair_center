@@ -10,9 +10,9 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="flex justify-center gap-6">
+      <div className="flex justify-center gap-6 flex-mobile-col">
         <Link href="/user/dashboard" style={{ textDecoration: 'none' }}>
-          <div className="glass-panel" style={{ width: '320px', textAlign: 'center', cursor: 'pointer' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', cursor: 'pointer' }}>
             <h2 style={{ color: 'var(--accent-primary)' }}>พนักงานประจำสาขา</h2>
             <p style={{ color: 'var(--text-muted)' }}>แจ้งซ่อมอุปกรณ์, ติดตามสถานะงานซ่อม และประเมินความพึงพอใจ</p>
             <div className="mt-6">
@@ -22,7 +22,7 @@ export default function Home() {
         </Link>
 
         <Link href="/admin/dashboard" style={{ textDecoration: 'none' }}>
-          <div className="glass-panel" style={{ width: '320px', textAlign: 'center', cursor: 'pointer' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', cursor: 'pointer' }}>
             <h2 style={{ color: 'var(--accent-warning)' }}>แอดมิน / ทีมช่าง</h2>
             <p style={{ color: 'var(--text-muted)' }}>จัดการรายการแจ้งซ่อม, มอบหมายงาน และอัปเดตสถานะงานซ่อม</p>
             <div className="mt-6">

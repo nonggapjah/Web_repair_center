@@ -31,7 +31,7 @@ export default function UserNewTicket() {
     };
 
     return (
-        <main className="container animate-fade-in" style={{ padding: '4rem 2rem', maxWidth: '800px', margin: '0 auto' }}>
+        <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
                 <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>ส่งคำขอแจ้งซ่อม</h1>
                 <p style={{ color: 'var(--text-muted)' }}>แจ้งซ่อมตู้แช่, งานไฟฟ้า, งานประปา หรือปัญหาทางโครงสร้างอาคาร</p>

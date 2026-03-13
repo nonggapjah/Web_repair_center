@@ -58,10 +58,10 @@ export default function AdminDashboard() {
     }));
 
     return (
-        <main className="container animate-fade-in" style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto' }}>
+        <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '1600px', margin: '0 auto' }}>
 
             {/* Header ส่วนหัว */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
                 <div>
                     <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem', marginBottom: '0.2rem' }}>จัดการงานซ่อมบำรุง</h1>
                     <p style={{ color: 'var(--text-muted)' }}>ติดตามและมอบหมายงานให้ทีมช่าง สำหรับทุกสาขาของ วิลล่า มาร์เก็ท</p>
@@ -109,9 +109,9 @@ export default function AdminDashboard() {
 
             {viewMode === 'kanban' ? (
                 <DragDropContext onDragEnd={onDragEnd}>
-                    <div style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
+                    <div className="responsive-table-container" style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
                         {columns.map(col => (
-                            <div key={col.status} style={{ minWidth: '300px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <div key={col.status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
                                     <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>{translateStatus(col.status)}</h3>
                                     <span style={{ background: 'rgba(30, 58, 138, 0.1)', color: 'var(--accent-primary)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '700' }}>
@@ -179,8 +179,8 @@ export default function AdminDashboard() {
                     </div>
                 </DragDropContext>
             ) : (
-                <div className="glass-panel" style={{ padding: '0', background: '#fff' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="glass-panel responsive-table-container" style={{ padding: '0', background: '#fff' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
                         <thead style={{ background: 'rgba(30, 58, 138, 0.05)' }}>
                             <tr>
                                 <th style={{ padding: '1rem', textAlign: 'left' }}>สถานะ</th>
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
                     background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end'
                 }} onClick={() => setSelectedTicket(null)}>
                     <div
-                        style={{ width: '500px', background: '#fff', height: '100%', padding: '2rem', display: 'flex', flexDirection: 'column' }}
+                        style={{ width: 'min(500px, 100%)', background: '#fff', height: '100%', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column' }}
                         onClick={e => e.stopPropagation()}
                         className="animate-fade-in"
                     >

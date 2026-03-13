@@ -44,19 +44,19 @@ export default function UserTicketList() {
     };
 
     return (
-        <main className="container animate-fade-in" style={{ padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <main className="container animate-fade-in" style={{ padding: '2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
                 <div>
                     <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>รายการแจ้งซ่อมของสาขา</h1>
                     <p style={{ color: 'var(--text-muted)' }}>สาขาพรมพงษ์ (V-PHROM - 024) | ติดตามสถานะและยืนยันการซ่อมบำรุง</p>
                 </div>
                 <Link href="/user/new-ticket" style={{ textDecoration: 'none' }}>
-                    <span className="btn-primary" style={{ display: 'inline-block' }}>+ แจ้งซ่อมรายการใหม่</span>
+                    <span className="btn-primary" style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>+ แจ้งซ่อมรายการใหม่</span>
                 </Link>
             </div>
 
-            <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
+                <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ background: 'rgba(30, 58, 138, 0.05)', borderBottom: '1px solid var(--border-glass)' }}>
                             <th style={{ padding: '1.2rem', color: 'var(--text-secondary)' }}>รหัส</th>
@@ -76,8 +76,8 @@ export default function UserTicketList() {
                                 <td style={{ padding: '1.2rem', color: 'var(--text-muted)' }}>{ticket.date}</td>
                                 <td style={{ padding: '1.2rem' }}>
                                     <span className={`badge ${ticket.status === 'Planed' ? 'badge-planed' :
-                                            ticket.status === 'Closed' ? 'badge-closed' :
-                                                ticket.status === 'On Process' || ticket.status === 'Repairing' ? 'badge-onprocess' : 'badge-open'
+                                        ticket.status === 'Closed' ? 'badge-closed' :
+                                            ticket.status === 'On Process' || ticket.status === 'Repairing' ? 'badge-onprocess' : 'badge-open'
                                         }`}>
                                         {translateStatus(ticket.status)}
                                     </span>
