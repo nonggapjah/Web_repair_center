@@ -9,8 +9,27 @@ export default function UserNewTicket() {
         branchId: 'V-PHROM'
     });
 
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeImage = (e: React.MouseEvent) => {
+        e.stopPropagation(); // ป้องกันการไป trigger click ของ parent div
+        setImagePreview(null);
+        const fileInput = document.getElementById('fileUpload') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,6 +45,7 @@ export default function UserNewTicket() {
         setTimeout(() => {
             setSuccess(true);
             setFormData({ product: '', symptom: '', description: '', branchId: 'V-PHROM' });
+            setImagePreview(null);
             setTimeout(() => setSuccess(false), 3000);
         }, 1000);
     };
@@ -109,16 +129,75 @@ export default function UserNewTicket() {
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>อัปโหลดรูปภาพ (หลักฐานความเสียหาย)</label>
                         <div
                             className="input-glass"
-                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', borderStyle: 'dashed', cursor: 'pointer' }}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                padding: imagePreview ? '1rem' : '2rem',
+                                borderStyle: 'dashed',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                minHeight: '150px',
+                                justifyContent: 'center',
+                                transition: '0.2s'
+                            }}
                             onClick={() => document.getElementById('fileUpload')?.click()}
                         >
-                            <input type="file" id="fileUpload" style={{ display: 'none' }} accept="image/*" />
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '1rem' }}>
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>คลิกเพื่ออัปโหลดรูปภาพ หรือลากไฟล์มาวาง</p>
+                            {/* Input สำหรับอัปโหลดและเปิดกล้อง */}
+                            <input
+                                type="file"
+                                id="fileUpload"
+                                style={{ display: 'none' }}
+                                accept="image/*"
+                                onChange={handleImageChange}
+                            />
+
+                            {imagePreview ? (
+                                <div style={{ width: '100%', position: 'relative' }}>
+                                    <img
+                                        src={imagePreview}
+                                        alt="Preview"
+                                        style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '8px' }}
+                                    />
+                                    {/* ปุ่ม X สำหรับลบรูป */}
+                                    <button
+                                        onClick={removeImage}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '10px',
+                                            right: '10px',
+                                            background: 'var(--accent-danger)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            fontSize: '18px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                                            zIndex: 10
+                                        }}
+                                        title="ลบรูปภาพ"
+                                    >
+                                        &times;
+                                    </button>
+                                    <div style={{ textAlign: 'center', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                        คลิกที่รูปเพื่อเปลี่ยนรูปภาพ
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '1rem' }}>
+                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                        <circle cx="12" cy="13" r="4"></circle>
+                                    </svg>
+                                    <p style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.2rem' }}>ถ่ายรูปหรือเลือกไฟล์</p>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>รองรับไฟล์ภาพทุกประเภท</p>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
