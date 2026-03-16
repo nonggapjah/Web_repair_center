@@ -12,7 +12,6 @@ model Branch {
   BranchName String
   Users      User[]
   Tickets    RepairTicket[]
-  @@map("Maintenance_Ticket_branch")
 }
 
 model User {
@@ -25,7 +24,6 @@ model User {
   Tickets    RepairTicket[]
   Comments   TicketComment[]
   CreatedAt  DateTime        @default(now())
-  @@map("Maintenance_Ticket_User")
 }
 
 model RepairTicket {
@@ -46,7 +44,6 @@ model RepairTicket {
   CreatedAt     DateTime        @default(now())
   History       TicketHistory[]
   Comments      TicketComment[]
-  @@map("Maintenance_Ticket_RepairTicket")
 }
 
 model TicketHistory {
@@ -57,7 +54,6 @@ model TicketHistory {
   UpdatedBy String
   Note      String?
   Timestamp DateTime     @default(now())
-  @@map("Maintenance_Ticket_History")
 }
 
 model TicketComment {
@@ -68,5 +64,4 @@ model TicketComment {
   User      User         @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
   Message   String
   Timestamp DateTime     @default(now())
-  @@map("Maintenance_Ticket_Comment")
 }
