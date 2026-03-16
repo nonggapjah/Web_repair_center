@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: 'ระบบจัดการงานซ่อมและดูแลอาคาร วิลล่า มาร์เก็ท',
 }
 
+import { LiffProvider } from '@/components/LiffProvider';
+
 export default function RootLayout({
   children,
 }: {
@@ -14,8 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <NavBar />
-        {children}
+        <LiffProvider>
+          <NavBar />
+          {children}
+        </LiffProvider>
       </body>
     </html>
   )

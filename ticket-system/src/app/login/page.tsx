@@ -2,7 +2,10 @@
 import React, { useState } from 'react';
 import { login } from '@/app/actions/auth';
 
+import { useLiff } from '@/components/LiffProvider';
+
 export default function LoginPage() {
+    const { profile, liff, isReady } = useLiff();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +35,12 @@ export default function LoginPage() {
         }
     };
 
+    const handleLiffLogin = () => {
+        if (liff && !liff.isLoggedIn()) {
+            liff.login();
+        }
+    };
+
     return (
         <main style={{
             minHeight: '100vh',
@@ -47,6 +56,39 @@ export default function LoginPage() {
                     alt="Villa Market"
                     style={{ width: '180px', marginBottom: '2rem' }}
                 />
+
+                {profile ? (
+                    <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '15px' }}>
+                        <img src={profile.pictureUrl} alt={profile.displayName} style={{ width: '50px', height: '50px', borderRadius: '50%', border: '2px solid var(--accent-success)' }} />
+                        <div style={{ textAlign: 'left' }}>
+                            <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0 }}>สวัสดีคุณ {profile.displayName}</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', margin: 0 }}>เข้าใช้งานผ่าน LINE</p>
+                        </div>
+                    </div>
+                ) : (
+                    isReady && liff && !liff.isLoggedIn() && (
+                        <button
+                            onClick={handleLiffLogin}
+                            style={{
+                                width: '100%',
+                                padding: '0.8rem',
+                                borderRadius: '10px',
+                                background: '#06C755',
+                                color: '#fff',
+                                border: 'none',
+                                marginBottom: '2rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.2rem' }}>LINE</span> เข้าสู่ระบบด้วย LINE
+                        </button>
+                    )
+                )}
 
                 <h1 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Repair System</h1>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>เข้าสู่ระบบด้วยรหัสสาขาของคุณ</p>
