@@ -12,18 +12,20 @@ model Branch {
   BranchName String
   Users      User[]
   Tickets    RepairTicket[]
+  @@map("Maintenance_Ticket_branch")
 }
 
 model User {
   UserID     String          @id @default(uuid())
   Username   String          @unique
-  Password   String          @default("1234") // รหัสผ่านเริ่มต้น
-  Role       String          @default("User") // Admin, User, Tech
+  Password   String          @default("1234") 
+  Role       String          @default("User") 
   BranchID   String
   Branch     Branch          @relation(fields: [BranchID], references: [BranchID])
   Tickets    RepairTicket[]
   Comments   TicketComment[]
   CreatedAt  DateTime        @default(now())
+  @@map("Maintenance_Ticket_User")
 }
 
 model RepairTicket {
@@ -36,14 +38,15 @@ model RepairTicket {
   Symptom       String
   Description   String?
   ImageURL      String?
-  Priority      String          @default("Medium") // "Low", "Medium", "High"
-  CurrentStatus String          @default("Planed") // Planed, Open, On Process, Waiting Parts, ETC, Rejected, Repairing, Closed, Completed
+  Priority      String          @default("Medium")
+  CurrentStatus String          @default("Planed")
   SLA_Deadline  DateTime?
   TotalCost     Float?
   CSAT_Score    Int?
   CreatedAt     DateTime        @default(now())
   History       TicketHistory[]
   Comments      TicketComment[]
+  @@map("Maintenance_Ticket_RepairTicket")
 }
 
 model TicketHistory {
@@ -54,6 +57,7 @@ model TicketHistory {
   UpdatedBy String
   Note      String?
   Timestamp DateTime     @default(now())
+  @@map("Maintenance_Ticket_History")
 }
 
 model TicketComment {
@@ -64,4 +68,5 @@ model TicketComment {
   User      User         @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
   Message   String
   Timestamp DateTime     @default(now())
+  @@map("Maintenance_Ticket_Comment")
 }
