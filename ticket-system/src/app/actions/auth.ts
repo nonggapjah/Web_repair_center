@@ -40,14 +40,9 @@ export async function login(username: string, password?: string) {
             role: user.Role,
             redirect: user.Role === 'Admin' ? '/admin/dashboard' : '/user/dashboard'
         };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Login error:", error);
-        // แสดงข้อความ Error ที่ละเอียดขึ้นชั่วคราวเพื่อการตรวจสอบ
-        const errorMessage = error?.message || "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล";
-        return {
-            success: false,
-            error: `Database Error: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`
-        };
+        return { success: false, error: "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล" };
     }
 }
 
