@@ -50,14 +50,16 @@ function NewTicketForm() {
         setError('');
         setIsSubmitting(true);
 
-        if (!formData.product || !formData.symptom) {
-            setError('กรุณาระบุอุปกรณ์และหมวดหมู่การซ่อมบำรุง');
+        if (!formData.symptom) {
+            setError('กรุณาระบุหมวดหมู่การซ่อมบำรุง');
             setIsSubmitting(false);
             return;
         }
 
         try {
-            const result = await createTicket(formData);
+            // Since product is mandatory in DB but removed from UI, we send an empty string or generic value
+            const finalData = { ...formData, product: formData.product || 'แจ้งซ่อมทั่วไป' };
+            const result = await createTicket(finalData);
             if (result.success) {
                 setSuccess(true);
                 setTimeout(() => {
@@ -108,18 +110,15 @@ function NewTicketForm() {
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>ชื่ออุปกรณ์ / หมายเลขเครื่อง <span style={{ color: 'red' }}>*</span></label>
-                        <input type="text" className="input-glass" placeholder="เช่น ตู้แช่แข็ง #03, ประตูหน้า, ฝ้าเพดาน" value={formData.product} onChange={e => setFormData({ ...formData, product: e.target.value })} />
-                    </div>
-
-                    <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>หมวดหมู่ปัญหา <span style={{ color: 'red' }}>*</span></label>
                         <select className="input-glass" value={formData.symptom} onChange={e => setFormData({ ...formData, symptom: e.target.value })} style={{ background: 'rgba(15, 23, 42, 0.6)' }}>
                             <option value="" disabled>เลือกประเภทปัญหา</option>
-                            <option value="Refrigeration">ระบบทำความเย็น</option>
-                            <option value="Electrical">ระบบไฟฟ้า</option>
-                            <option value="Plumbing">ระบบประปา</option>
-                            <option value="Other">อื่นๆ</option>
+                            <option value="เครื่องใช้ไฟฟ้า">เครื่องใช้ไฟฟ้า</option>
+                            <option value="งานไฟ">งานไฟ</option>
+                            <option value="งานซ่อมบำรุง">งานซ่อมบำรุง</option>
+                            <option value="งานตู้แช่">งานตู้แช่</option>
+                            <option value="งานซ่อมทั่วไป">งานซ่อมทั่วไป</option>
+                            <option value="งานรับเหมา">งานรับเหมา</option>
                         </select>
                     </div>
 

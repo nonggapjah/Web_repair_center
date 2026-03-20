@@ -1,87 +1,97 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
-
-const branches = [
-    { code: "1000", name: "VILLA MARKET SUKHUMVIT 33" },
-    { code: "1003", name: "VILLA MARKET NICHADA" },
-    { code: "1005", name: "VILLA MARKET SUKHUMVIT 49" },
-    { code: "1006", name: "VILLA MARKET PLOENCHIT" },
-    { code: "1007", name: "VILLA MARKET SILOM" },
-    { code: "1011", name: "VILLA MARKET SUKHUMVIT 55" },
-    { code: "1014", name: "VILLA MARKET AREE" },
-    { code: "1015", name: "VILLA MARKET PATTAYA" },
-    { code: "1016", name: "VILLA MARKET HUAHIN" },
-    { code: "1017", name: "VILLA MARKET CHAENG WATTHANA" },
-    { code: "1019", name: "VILLA MARKET RATCHAYOTHIN" },
-    { code: "1020", name: "VILLA MARKET RATCHAPRUEK" },
-    { code: "1021", name: "VILLA MARKET PHUKET" },
-    { code: "1022", name: "VILLA MARKET KASET-NAWAMIN" },
-    { code: "1023", name: "VILLA MARKET PARADISE" },
-    { code: "1024", name: "VILLA MARKET SAMMAKORN" },
-    { code: "1026", name: "VILLA MARKET SENA" },
-    { code: "1030", name: "VILLA MARKET K-VILLAGE" },
-    { code: "1032", name: "VILLA MARKET LAGUNA PHUKET" },
-    { code: "1033", name: "VILLA MARKET PESEO RAMKHAMHAENG" },
-    { code: "1034", name: "VILLA MARKET PESEO-LAT-KRABANG" },
-    { code: "1036", name: "VILLA MARKET RAMA3" },
-    { code: "1038", name: "VILLA MARKET PESEO KANCHANAPISEK" },
-    { code: "1039", name: "VILLA MARKET BOAT LAGOON" },
-    { code: "1040", name: "VILLA MARKET INDEX HUAHIN" },
-    { code: "1041", name: "VILLA MARKET THE CIRCLE RATCHAPRUEK" },
-    { code: "1042", name: "VILLA MARKET UD TOWN UDON" },
-    { code: "1044", name: "VILLA MARKET BANGNA" },
-    { code: "1046", name: "VILLA MARKET SUKHUMVIT 11" },
-    { code: "1047", name: "VILLA MARKET LASALLE" },
-    { code: "1048", name: "VILLA MARKET LITTLE WALK PATTAYA" },
-    { code: "1049", name: "VILLA MARKET LUNGSUAN" },
-    { code: "1050", name: "VILLA MARKET BUKIS PHUKET" },
-    { code: "1051", name: "VILLA MARKET CHIC REPUBLIC" },
-    { code: "1052", name: "VILLA MARKET LITTLE WALKLAT-KRABANG" },
-    { code: "1053", name: "VILLA MARKET LITTLE KRUNGTHEP-KRITHA" },
-    { code: "1054", name: "VILLA MARKET GAYSORN AMARIN" },
-    { code: "1055", name: "VILLA MARKET NANG LINCHI" },
-    { code: "1056", name: "VILLA MARKET HOMEPRO CHERNGTALAY" },
-    { code: "1057", name: "VILLA MARKET KAMALA PHUKET" },
-    { code: "1058", name: "VILLA MARKET LITTLE WALK-RATTANATIBETH" },
-    { code: "1059", name: "VILLA MARKET KINGSQUARE" }
-];
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
 
 async function main() {
-    console.log('--- Starting Seed Branches ---');
+    const branches = [
+        { id: '1000', name: 'SUKHUMVIT 33' },
+        { id: '1003', name: 'NICHADA' },
+        { id: '1005', name: 'SUKHUMVIT 49' },
+        { id: '1006', name: 'PLOENCHIT' },
+        { id: '1007', name: 'SILOM' },
+        { id: '1011', name: 'THONGLOR' },
+        { id: '1014', name: 'AREE' },
+        { id: '1015', name: 'PATTAYA' },
+        { id: '1016', name: 'HUAHIN' },
+        { id: '1017', name: 'CHAENG WATTHANA' },
+        { id: '1019', name: 'RATCHAYOTHIN' },
+        { id: '1020', name: 'RATCHAPRUEK' },
+        { id: '1021', name: 'PHUKET' },
+        { id: '1022', name: 'KASET-NAWAMIN' },
+        { id: '1023', name: 'PARADISE' },
+        { id: '1024', name: 'SAMMAKORN' },
+        { id: '1026', name: 'SENA' },
+        { id: '1030', name: 'K-VILLAGE' },
+        { id: '1032', name: 'LAGUNA PHUKET' },
+        { id: '1033', name: 'PESEO-RAM' },
+        { id: '1034', name: 'PESEO-LAT' },
+        { id: '1036', name: 'RAMA3' },
+        { id: '1038', name: 'PESEO KAN' },
+        { id: '1039', name: 'BOAT LAGOON' },
+        { id: '1040', name: 'INDEX HUAHIN' },
+        { id: '1041', name: 'THE CIRCLE' },
+        { id: '1042', name: 'UD TOWN UDON' },
+        { id: '1044', name: 'BANGNA' },
+        { id: '1046', name: 'SUKHUMVIT 11' },
+        { id: '1047', name: 'LASALLE' },
+        { id: '1048', name: 'LITTLE WALK PATTAYA' },
+        { id: '1049', name: 'LUNGSUAN' },
+        { id: '1050', name: 'BUKIS PHUKET' },
+        { id: '1051', name: 'CHIC REPUBLIC' },
+        { id: '1052', name: 'LITTLE WALKLAT-KRABANG' },
+        { id: '1053', name: 'VILLA KRUNGTHEP-KRITHA' },
+        { id: '1054', name: 'VILLA GAYSORN AMARIN' },
+        { id: '1055', name: 'VILLA NANG LINCHI' },
+        { id: '1056', name: 'HOMEPRO CHERNGTALAY' },
+        { id: '1057', name: 'KAMALA PHUKET' },
+        { id: '1058', name: 'LTTLE - RATTANATIBETH' },
+        { id: '1059', name: 'VILLA KINGSQUARE' },
+    ]
 
-    for (const br of branches) {
+    console.log('Start seeding branches...')
+    for (const b of branches) {
         await prisma.branch.upsert({
-            where: { BranchID: br.code },
-            update: { BranchName: br.name },
+            where: { BranchID: b.id },
+            update: {},
             create: {
-                BranchID: br.code,
-                BranchName: br.name
-            }
-        });
-        console.log(`Synced: ${br.code} - ${br.name}`);
+                BranchID: b.id,
+                BranchName: b.name,
+            },
+        })
     }
 
-    // สร้าง Admin Account ไว้ใช้งานเบื้องต้น
+    console.log('Start seeding users...')
+    // Admin user
     await prisma.user.upsert({
         where: { Username: 'admin' },
-        update: { Password: 'Villa@2026' },
+        update: {},
         create: {
             Username: 'admin',
-            Password: 'Villa@2026',
+            Password: 'Villamarket@2022',
             Role: 'Admin',
-            BranchID: '1000'
-        }
-    });
+            BranchID: '1000',
+        },
+    })
 
-    console.log('--- Seed Finished Successfully ---');
+    // Sample regular user for first branch
+    await prisma.user.upsert({
+        where: { Username: '1000' },
+        update: {},
+        create: {
+            Username: '1000',
+            Password: '1234',
+            Role: 'User',
+            BranchID: '1000',
+        },
+    })
+
+    console.log('Seeding finished successfully!')
 }
 
 main()
     .catch((e) => {
-        console.error(e);
-        process.exit(1);
+        console.error(e)
+        process.exit(1)
     })
     .finally(async () => {
-        await prisma.$disconnect();
-    });
+        await prisma.$disconnect()
+    })

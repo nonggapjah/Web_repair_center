@@ -34,6 +34,23 @@ export default function UserTicketList() {
         }
     };
 
+    const getSLAColor = (ticket: any) => {
+        if (ticket.CurrentStatus === 'Completed' || ticket.CurrentStatus === 'Closed') {
+            return '#10b981'; // Green
+        }
+
+        const lastUpdate = ticket.History && ticket.History.length > 0
+            ? new Date(ticket.History[0].Timestamp)
+            : new Date(ticket.CreatedAt);
+
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 3600 * 24));
+
+        if (diffDays > 7) return '#ef4444'; // Red
+        if (diffDays > 3) return '#f59e0b'; // Yellow
+        return null; // None
+    };
+
     const fetchTickets = async (branchId: string) => {
         try {
             const data = await getBranchTickets(branchId);
@@ -93,16 +110,17 @@ export default function UserTicketList() {
                                 <thead>
                                     <tr style={{ background: 'rgba(30, 58, 138, 0.05)' }}>
                                         <th style={{ padding: '1.2rem' }}>รหัส</th>
-                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
+                                        <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
                                         <th style={{ padding: '1.2rem' }}>อัปเดตล่าสุด</th>
                                         <th style={{ padding: '1.2rem' }}>สถานะ</th>
+                                        <th style={{ padding: '1.2rem' }}>ช่างที่รับผิดชอบ</th>
                                         <th style={{ padding: '1.2rem' }}>ข้อความล่าสุด</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {tickets.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>ยังไม่มีรายการแจ้งซ่อมในขณะนี้</td>
+                                            <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>ยังไม่มีรายการแจ้งซ่อมในขณะนี้</td>
                                         </tr>
                                     ) : (
                                         tickets.map(ticket => {
@@ -115,14 +133,17 @@ export default function UserTicketList() {
                                                     onClick={() => setSelectedTicket(ticket)}
                                                 >
                                                     <td style={{ padding: '1.2rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{ticket.TicketID.substring(0, 8).toUpperCase()}</td>
-                                                    <td style={{ padding: '1.1rem' }}>{ticket.Product}</td>
+                                                    <td style={{ padding: '1.1rem' }}>{ticket.Symptom}</td>
                                                     <td style={{ padding: '1.1rem' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</td>
                                                     <td style={{ padding: '1.1rem' }}>
                                                         <span className="badge" style={{
-                                                            background: `${statusColor(ticket.CurrentStatus)}15`,
-                                                            color: statusColor(ticket.CurrentStatus),
-                                                            border: `1px solid ${statusColor(ticket.CurrentStatus)}30`
+                                                            background: getSLAColor(ticket) || `${statusColor(ticket.CurrentStatus)}15`,
+                                                            color: getSLAColor(ticket) ? '#fff' : statusColor(ticket.CurrentStatus),
+                                                            border: getSLAColor(ticket) ? 'none' : `1px solid ${statusColor(ticket.CurrentStatus)}30`
                                                         }}>{translateStatus(ticket.CurrentStatus)}</span>
+                                                    </td>
+                                                    <td style={{ padding: '1.1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                        {ticket.Technician || '-'}
                                                     </td>
                                                     <td style={{ padding: '1.1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                                         {latestHistory?.Note ? `💬 ${latestHistory.Note}` : '-'}
@@ -171,8 +192,13 @@ export default function UserTicketList() {
                         </div>
 
                         <div style={{ marginBottom: '1.5rem', background: 'rgba(30,58,138,0.03)', padding: '1.2rem', borderRadius: '15px' }}>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>ข้อมูลอุปกรณ์</label>
-                            <p style={{ fontSize: '1.2rem', fontWeight: '700', margin: '0 0 0.5rem 0' }}>{selectedTicket.Product}</p>
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>หมวดหมู่ปัญหา</label>
+                            <p style={{ fontSize: '1.2rem', fontWeight: '700', margin: '0 0 0.5rem 0' }}>{selectedTicket.Symptom}</p>
+                            {selectedTicket.Technician && (
+                                <div style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                                    ช่างที่รับผิดชอบ: {selectedTicket.Technician}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedTicket.CreatedAt).toLocaleDateString('th-TH')}</span>

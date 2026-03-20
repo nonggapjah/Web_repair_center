@@ -5,6 +5,7 @@ import { getAllTickets, updateTicketStatus } from '@/app/actions/tickets';
 import { logout } from '@/app/actions/auth';
 
 const statuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed", "Closed"];
+const technicians = ["ช่างยศ", "ช่างชา", "ช่างต้น", "ช่างปาด", "ช่างสกล", "ช่างเขียด", "ช่างประวิท", "ช่างเดี่ยว"];
 
 const translateStatus = (status: string) => {
     switch (status) {
@@ -30,12 +31,30 @@ const statusColor = (status: string) => {
     }
 };
 
+const getSLAColor = (ticket: any) => {
+    if (ticket.CurrentStatus === 'Completed' || ticket.CurrentStatus === 'Closed') {
+        return '#10b981'; // Green (จบงาน)
+    }
+
+    const lastUpdate = ticket.History && ticket.History.length > 0
+        ? new Date(ticket.History[0].Timestamp)
+        : new Date(ticket.CreatedAt);
+
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 3600 * 24));
+
+    if (diffDays > 7) return '#ef4444'; // Red (> 7 วัน)
+    if (diffDays > 3) return '#f59e0b'; // Yellow (> 3 วัน)
+    return null; // No color (<= 3 วัน)
+};
+
 export default function AdminDashboard() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
+    const [selectedTech, setSelectedTech] = useState('');
 
     const fetchTickets = async () => {
         try {
@@ -55,6 +74,12 @@ export default function AdminDashboard() {
     useEffect(() => {
         fetchTickets();
     }, []);
+
+    useEffect(() => {
+        if (selectedTicket) {
+            setSelectedTech(selectedTicket.Technician || '');
+        }
+    }, [selectedTicket]);
 
     const handleLogout = async () => {
         await logout();
@@ -84,13 +109,42 @@ export default function AdminDashboard() {
     };
 
     const handleUpdateStatus = async (id: string, newStatus: string) => {
-        const result = await updateTicketStatus(id, newStatus, techNote);
+        const result = await updateTicketStatus(id, newStatus, techNote, selectedTech);
         if (result.success) {
             setTechNote('');
             await fetchTickets();
         } else {
             alert("เกิดข้อผิดพลาดในการอัปเดต");
         }
+    };
+
+    const handleExport = () => {
+        const headers = ["Ticket ID", "Status", "หมวดหมู่", "สาขา", "ช่างที่รับผิดชอบ", "รายละเอียด", "วันที่แจ้ง"];
+        const csvRows = [headers.join(",")];
+
+        tickets.forEach(t => {
+            const row = [
+                t.TicketID.substring(0, 8).toUpperCase(),
+                translateStatus(t.CurrentStatus),
+                t.Symptom,
+                t.Branch?.BranchName || t.BranchID,
+                t.Technician || "-",
+                (t.Description || "").replace(/,/g, " ").replace(/\n/g, " "),
+                new Date(t.CreatedAt).toLocaleString('th-TH')
+            ];
+            csvRows.push(row.join(","));
+        });
+
+        const csvString = "\uFEFF" + csvRows.join("\n");
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `repair_tickets_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const columns = statuses.map(status => ({
@@ -117,9 +171,25 @@ export default function AdminDashboard() {
                             <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem' }}>จัดการงานซ่อมบำรุง (Admin)</h1>
                             <p style={{ color: 'var(--text-muted)' }}>รวมรายการแจ้งซ่อมจากทุกสาขา</p>
                         </div>
-                        <div className="glass-panel" style={{ padding: '0.4rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                            <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
-                            <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+                        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                            <button onClick={handleExport} className="btn-secondary" style={{
+                                padding: '0.6rem 1.2rem',
+                                border: '1px solid var(--accent-primary)',
+                                color: 'var(--accent-primary)',
+                                background: 'transparent',
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem'
+                            }}>
+                                <span>📥 Export CSV</span>
+                            </button>
+                            <div className="glass-panel" style={{ padding: '0.4rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
+                                <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
+                                <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+                            </div>
                         </div>
                     </div>
 
@@ -138,13 +208,23 @@ export default function AdminDashboard() {
                                                     {col.items.map((ticket, index) => (
                                                         <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
                                                             {(provided, snapshot) => (
-                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1rem', marginBottom: '0.8rem', background: '#fff', boxShadow: snapshot.isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : 'var(--shadow-sm)', ...provided.draggableProps.style }}>
+                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{
+                                                                    padding: '1rem',
+                                                                    marginBottom: '0.8rem',
+                                                                    background: '#fff',
+                                                                    boxShadow: snapshot.isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : 'var(--shadow-sm)',
+                                                                    borderLeft: getSLAColor(ticket) ? `4px solid ${getSLAColor(ticket)}` : 'none',
+                                                                    ...provided.draggableProps.style
+                                                                }}>
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                                                                         <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</span>
                                                                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</span>
                                                                     </div>
-                                                                    <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Product}</h4>
-                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{ticket.Branch?.BranchName || ticket.BranchID}</div>
+                                                                    <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Symptom}</h4>
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                                        {ticket.Branch?.BranchName || ticket.BranchID}
+                                                                        {ticket.Technician && <span style={{ marginLeft: '0.5rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>• {ticket.Technician}</span>}
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                         </Draggable>
@@ -164,8 +244,9 @@ export default function AdminDashboard() {
                                     <tr style={{ background: 'rgba(30,58,138,0.05)' }}>
                                         <th style={{ padding: '1.2rem' }}>สถานะ</th>
                                         <th style={{ padding: '1.2rem' }}>รหัส</th>
-                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
+                                        <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
                                         <th style={{ padding: '1.2rem' }}>สาขา</th>
+                                        <th style={{ padding: '1.2rem' }}>ช่างที่รับผิดชอบ</th>
                                         <th style={{ padding: '1.2rem' }}>จัดการ</th>
                                     </tr>
                                 </thead>
@@ -173,11 +254,16 @@ export default function AdminDashboard() {
                                     {tickets.map(t => (
                                         <tr key={t.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }} className="hover-row">
                                             <td style={{ padding: '1.1rem' }}>
-                                                <span className="badge" style={{ background: `${statusColor(t.CurrentStatus)}15`, color: statusColor(t.CurrentStatus) }}>{translateStatus(t.CurrentStatus)}</span>
+                                                <span className="badge" style={{
+                                                    background: getSLAColor(t) || `${statusColor(t.CurrentStatus)}15`,
+                                                    color: getSLAColor(t) ? '#fff' : statusColor(t.CurrentStatus),
+                                                    border: getSLAColor(t) ? 'none' : `1px solid ${statusColor(t.CurrentStatus)}30`
+                                                }}>{translateStatus(t.CurrentStatus)}</span>
                                             </td>
                                             <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
-                                            <td style={{ padding: '1.1rem' }}>{t.Product}</td>
+                                            <td style={{ padding: '1.1rem' }}>{t.Symptom}</td>
                                             <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
+                                            <td style={{ padding: '1.1rem' }}>{t.Technician || '-'}</td>
                                             <td style={{ padding: '1.1rem' }}>
                                                 <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
                                             </td>
@@ -223,7 +309,7 @@ export default function AdminDashboard() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                                 <div>
                                     <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
-                                    <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Product}</h2>
+                                    <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Symptom}</h2>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
                                 </div>
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
@@ -258,6 +344,16 @@ export default function AdminDashboard() {
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ส่งข้อความถึงสาขา:</label>
                                 <textarea className="input-glass" style={{ background: '#fff', height: '100px', fontSize: '0.9rem' }} placeholder="ระบุความบันทึก..." value={techNote} onChange={e => setTechNote(e.target.value)} />
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ช่างที่รับผิดชอบ:</label>
+                                <select className="input-glass" style={{ background: '#fff' }} value={selectedTech} onChange={e => setSelectedTech(e.target.value)}>
+                                    <option value="">-- ยังไม่ได้ระบุช่าง --</option>
+                                    {technicians.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>

@@ -80,11 +80,14 @@ export async function getAllTickets() {
     });
 }
 
-export async function updateTicketStatus(ticketId: string, status: string, note?: string) {
+export async function updateTicketStatus(ticketId: string, status: string, note?: string, technician?: string) {
     try {
         await prisma.repairTicket.update({
             where: { TicketID: ticketId },
-            data: { CurrentStatus: status }
+            data: {
+                CurrentStatus: status,
+                Technician: technician
+            }
         });
 
         // บันทึกประวัติ

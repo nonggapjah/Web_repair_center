@@ -42,6 +42,7 @@ model RepairTicket {
   SLA_Deadline  DateTime?
   TotalCost     Float?
   CSAT_Score    Int?
+  Technician    String?
   CreatedAt     DateTime        @default(now())
   History       TicketHistory[]
   Comments      TicketComment[]
