@@ -91,6 +91,11 @@ export default function AdminDashboard() {
         const { source, destination, draggableId } = result;
         if (source.droppableId === destination.droppableId) return;
 
+        if (destination.droppableId === 'Closed') {
+            alert("สถานะ 'ปิดงานถาวร' ต้องให้ทางสาขาเป็นผู้กดยืนยันเท่านั้น");
+            return;
+        }
+
         const oldTickets = [...tickets];
         setTickets(prev => prev.map(t => {
             if (t.TicketID === draggableId) {
@@ -358,7 +363,7 @@ export default function AdminDashboard() {
 
                             <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                                {statuses.map(s => (
+                                {statuses.filter(s => s !== 'Closed').map(s => (
                                     <button
                                         key={s}
                                         onClick={() => handleUpdateStatus(selectedTicket.TicketID, s)}

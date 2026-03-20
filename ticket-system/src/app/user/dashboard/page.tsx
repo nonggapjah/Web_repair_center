@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getBranchTickets } from '@/app/actions/tickets';
+import { getBranchTickets, updateTicketStatus } from '@/app/actions/tickets';
 import { getSession, logout } from '@/app/actions/auth';
 
 export default function UserTicketList() {
@@ -78,6 +78,19 @@ export default function UserTicketList() {
     const handleLogout = async () => {
         await logout();
         window.location.href = '/login';
+    };
+
+    const handleConfirmSuccess = async (ticketId: string) => {
+        if (!confirm('ยืนยันว่าการซ่อมเสร็จสิ้นสมบูรณ์และต้องการปิดงานใช่หรือไม่?')) return;
+
+        const result = await updateTicketStatus(ticketId, 'Closed', 'สาขายืนยันปิดงานเรียบร้อย');
+        if (result.success) {
+            alert('ปิดงานเรียบร้อยแล้ว');
+            setSelectedTicket(null);
+            if (user) fetchTickets(user.branchId);
+        } else {
+            alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
+        }
     };
 
     if (!user) return null;
@@ -204,7 +217,6 @@ export default function UserTicketList() {
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedTicket.CreatedAt).toLocaleDateString('th-TH')}</span>
                             </div>
                         </div>
-
                         <div>
                             <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>Timeline ความคืบหน้า</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -218,6 +230,21 @@ export default function UserTicketList() {
                                 ))}
                             </div>
                         </div>
+
+                        {selectedTicket.CurrentStatus === 'Completed' && (
+                            <div style={{ marginTop: '2rem', padding: '1.5rem', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.05)', border: '1px dashed #10b981' }}>
+                                <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#065f46', textAlign: 'center', fontWeight: 'bold' }}>
+                                    ช่างแจ้งว่าซ่อมเสร็จเรียบร้อยแล้ว <br /> กรุณาตรวจสอบและกดยืนยันเพื่อปิดงาน
+                                </p>
+                                <button
+                                    onClick={() => handleConfirmSuccess(selectedTicket.TicketID)}
+                                    className="btn-primary"
+                                    style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                >
+                                    <span>✅ ยืนยันว่าเสร็จเรียบร้อย (ปิดงาน)</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
