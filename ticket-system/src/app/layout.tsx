@@ -36,11 +36,11 @@ function NavBar() {
 
   return (
     <nav className="navbar" id="main-nav">
-      <div className="container flex justify-between items-center" style={{ padding: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.2rem' }}>🏠</span>
-            <span style={{ fontWeight: 'bold' }}>หน้าหลัก</span>
+      <div className="container flex-mobile-col" style={{ padding: '0 0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', justifyContent: 'space-between' }}>
+          <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '1.1rem' }}>🏠</span>
+            <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>หน้าหลัก</span>
           </Link>
           <span className="nav-brand">ระบบซ่อมบำรุง Villa Market</span>
         </div>
