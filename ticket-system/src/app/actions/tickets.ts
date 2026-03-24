@@ -7,6 +7,7 @@ export async function createTicket(formData: {
     symptom: string;
     description: string;
     branchId: string;
+    imageURL?: string;
 }) {
     try {
         // ในระบบจริงต้องดึง UserID จาก Session
@@ -29,6 +30,7 @@ export async function createTicket(formData: {
                 Product: formData.product,
                 Symptom: formData.symptom,
                 Description: formData.description,
+                ImageURL: formData.imageURL,
                 BranchID: formData.branchId,
                 UserID: user.UserID,
                 CurrentStatus: 'Open',

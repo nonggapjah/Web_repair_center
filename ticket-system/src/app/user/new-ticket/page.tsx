@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createTicket } from '@/app/actions/tickets';
+import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { Suspense } from 'react';
 
@@ -30,6 +31,7 @@ function NewTicketForm() {
     }, [searchParams]);
 
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +39,7 @@ function NewTicketForm() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            setSelectedFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result as string);
@@ -57,8 +60,35 @@ function NewTicketForm() {
         }
 
         try {
+            let publicUrl = '';
+
+            if (selectedFile) {
+                const fileExt = selectedFile.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('tickets')
+                    .upload(filePath, selectedFile);
+
+                if (uploadError) {
+                    throw new Error('Upload failed: ' + uploadError.message);
+                }
+
+                const { data } = supabase.storage
+                    .from('tickets')
+                    .getPublicUrl(filePath);
+
+                publicUrl = data.publicUrl;
+            }
+
             // Since product is mandatory in DB but removed from UI, we send an empty string or generic value
-            const finalData = { ...formData, product: formData.product || 'แจ้งซ่อมทั่วไป' };
+            const finalData = {
+                ...formData,
+                product: formData.product || 'แจ้งซ่อมทั่วไป',
+                imageURL: publicUrl
+            };
+
             const result = await createTicket(finalData);
             if (result.success) {
                 setSuccess(true);
@@ -68,8 +98,9 @@ function NewTicketForm() {
             } else {
                 setError(result.error || 'เกิดข้อผิดพลาด');
             }
-        } catch (err) {
-            setError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
+        } catch (err: any) {
+            console.error('Submit error:', err);
+            setError(err.message || 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
         } finally {
             setIsSubmitting(false);
         }

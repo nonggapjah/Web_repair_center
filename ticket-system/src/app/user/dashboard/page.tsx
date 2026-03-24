@@ -217,6 +217,19 @@ export default function UserTicketList() {
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedTicket.CreatedAt).toLocaleDateString('th-TH')}</span>
                             </div>
                         </div>
+
+                        {selectedTicket.ImageURL && (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>รูปภาพประกอบ</label>
+                                <img
+                                    src={selectedTicket.ImageURL}
+                                    alt="Evidence"
+                                    style={{ width: '100%', borderRadius: '15px', border: '1px solid rgba(0,0,0,0.05)', maxHeight: '300px', objectFit: 'cover', cursor: 'pointer' }}
+                                    onClick={() => window.open(selectedTicket.ImageURL, '_blank')}
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>Timeline ความคืบหน้า</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>

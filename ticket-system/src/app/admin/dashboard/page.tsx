@@ -320,6 +320,18 @@ export default function AdminDashboard() {
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                             </div>
 
+                            {selectedTicket.ImageURL && (
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รูปภาพประกอบ:</label>
+                                    <img
+                                        src={selectedTicket.ImageURL}
+                                        alt="Evidence"
+                                        style={{ width: '100%', borderRadius: '15px', marginTop: '0.5rem', maxHeight: '300px', objectFit: 'cover', cursor: 'pointer' }}
+                                        onClick={() => window.open(selectedTicket.ImageURL, '_blank')}
+                                    />
+                                </div>
+                            )}
+
                             <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1.2rem', borderRadius: '15px', marginBottom: '1.5rem' }}>
                                 <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รายละเอียดปัญหา:</label>
                                 <p style={{ marginTop: '0.4rem', fontSize: '0.95rem' }}>{selectedTicket.Description || '-'}</p>
