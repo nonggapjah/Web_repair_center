@@ -14,6 +14,15 @@ const BRANCH_MAP: Record<string, string> = {
     "1030": "K-VILLAGE"
 };
 
+const PRODUCT_OPTIONS: Record<string, string[]> = {
+    "เครื่องใช้ไฟฟ้า": ["เครื่องพิมพ์ใบเสร็จ", "เครื่องสแกนบาร์โค้ด", "เครื่องรูดบัตร", "พัดลม", "ไมโครเวฟ", "กาน้ำร้อน", "อื่นๆ"],
+    "งานไฟ": ["หลอดไฟ/ป้ายสาขา", "ปลั๊กไฟ/เต้ารับ", "ตู้เบรกเกอร์/ตู้ไฟ", "เครื่องสำรองไฟ (UPS)", "สวิตช์ไฟ", "อื่นๆ"],
+    "งานซ่อมบำรุง": ["ประตูอัตโนมัติ", "แอร์/เครื่องปรับอากาศ", "ประตูห้องน้ำ/ลูกบิด", "ก๊อกน้ำ/อ่างล้างมือ", "ชักโครก/สายชำระ", "พื้น/กระเบื้อง/เพดาน", "อื่นๆ"],
+    "งานตู้แช่": ["ตู้แช่เย็น (Chiller)", "ตู้แช่แข็ง (Freezer)", "ตู้แช่ไวน์", "ห้องเย็น (Cold Room)", "ตู้แช่เคาน์เตอร์", "อื่นๆ"],
+    "งานซ่อมทั่วไป": ["เคาน์เตอร์แคชเชียร์", "ชั้นวางสินค้า (Gondola)", "รถเข็นสินค้า", "โต๊ะ/เก้าอี้พนักงาน", "ป้ายโปรโมชั่น", "อื่นๆ"],
+    "งานรับเหมา": ["งานทาสี", "งานปรับปรุงโครงสร้าง", "งานกันสาด/หน้าร้าน", "งานระบบประปาหลัก", "อื่นๆ"]
+};
+
 function NewTicketForm() {
     const searchParams = useSearchParams();
     const [formData, setFormData] = useState({
@@ -23,6 +32,7 @@ function NewTicketForm() {
         branchId: '1024',
         requestDate: ''
     });
+    const [otherProductName, setOtherProductName] = useState('');
 
     useEffect(() => {
         const queryBranch = searchParams.get('branchId');
@@ -86,7 +96,7 @@ function NewTicketForm() {
             // Since product is mandatory in DB but removed from UI, we send an empty string or generic value
             const finalData = {
                 ...formData,
-                product: formData.product || 'แจ้งซ่อมทั่วไป',
+                product: formData.product === 'อื่นๆ' ? `อื่นๆ: ${otherProductName}` : formData.product,
                 imageURL: publicUrl
             };
 
@@ -153,6 +163,36 @@ function NewTicketForm() {
                             <option value="งานรับเหมา">งานรับเหมา</option>
                         </select>
                     </div>
+
+                    {formData.symptom && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>ระบุอุปกรณ์/สินค้าที่มีปัญหา <span style={{ color: 'red' }}>*</span></label>
+                            <select
+                                className="input-glass"
+                                value={formData.product}
+                                onChange={e => setFormData({ ...formData, product: e.target.value })}
+                                style={{ background: 'rgba(15, 23, 42, 0.6)' }}
+                            >
+                                <option value="" disabled>เลือกชนิดอุปกรณ์</option>
+                                {PRODUCT_OPTIONS[formData.symptom]?.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {formData.product === 'อื่นๆ' && (
+                        <div className="animate-fade-in">
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>ระบุชื่ออุปกรณ์ที่ต้องการแจ้งซ่อม <span style={{ color: 'red' }}>*</span></label>
+                            <input
+                                type="text"
+                                className="input-glass"
+                                placeholder="เช่น ชั้นวางของโซนอาหารสด..."
+                                value={otherProductName}
+                                onChange={e => setOtherProductName(e.target.value)}
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รายละเอียดปัญหา</label>
