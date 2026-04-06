@@ -20,7 +20,8 @@ function NewTicketForm() {
         product: '',
         symptom: '',
         description: '',
-        branchId: '1024'
+        branchId: '1024',
+        plannedDate: ''
     });
 
     useEffect(() => {
@@ -156,6 +157,16 @@ function NewTicketForm() {
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รายละเอียดปัญหา</label>
                         <textarea className="input-glass" style={{ minHeight: '120px' }} placeholder="ระบุอาการเสียโดยละเอียด..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>วันที่ต้องการให้เข้างาน</label>
+                        <input
+                            type="date"
+                            className="input-glass"
+                            value={formData.plannedDate}
+                            onChange={e => setFormData({ ...formData, plannedDate: e.target.value })}
+                        />
                     </div>
 
                     <div>

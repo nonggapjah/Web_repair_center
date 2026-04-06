@@ -8,6 +8,7 @@ export async function createTicket(formData: {
     description: string;
     branchId: string;
     imageURL?: string;
+    plannedDate?: string;
 }) {
     try {
         // ในระบบจริงต้องดึง UserID จาก Session
@@ -34,7 +35,8 @@ export async function createTicket(formData: {
                 BranchID: formData.branchId,
                 UserID: user.UserID,
                 CurrentStatus: 'Open',
-                Priority: 'Medium'
+                Priority: 'Medium',
+                PlannedDate: formData.plannedDate ? new Date(formData.plannedDate) : null
             }
         });
 
@@ -88,7 +90,8 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
             where: { TicketID: ticketId },
             data: {
                 CurrentStatus: status,
-                Technician: technician
+                Technician: technician,
+                PlannedDate: status === "Planed" || status === "In Progress" ? new Date() : undefined // หรือส่งค่าอื่นตามต้องการ
             }
         });
 

@@ -251,7 +251,8 @@ export default function AdminDashboard() {
                                         <th style={{ padding: '1.2rem' }}>รหัส</th>
                                         <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
                                         <th style={{ padding: '1.2rem' }}>สาขา</th>
-                                        <th style={{ padding: '1.2rem' }}>ช่างที่รับผิดชอบ</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่แจ้ง</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่เข้างาน</th>
                                         <th style={{ padding: '1.2rem' }}>จัดการ</th>
                                     </tr>
                                 </thead>
@@ -268,7 +269,10 @@ export default function AdminDashboard() {
                                             <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
                                             <td style={{ padding: '1.1rem' }}>{t.Symptom}</td>
                                             <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
-                                            <td style={{ padding: '1.1rem' }}>{t.Technician || '-'}</td>
+                                            <td style={{ padding: '1.1rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
+                                            <td style={{ padding: '1.1rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                                                {t.PlannedDate ? new Date(t.PlannedDate).toLocaleDateString('th-TH') : '-'}
+                                            </td>
                                             <td style={{ padding: '1.1rem' }}>
                                                 <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
                                             </td>
@@ -316,6 +320,9 @@ export default function AdminDashboard() {
                                     <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
                                     <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Symptom}</h2>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
+                                    <p style={{ color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: 'bold', marginTop: '0.3rem' }}>
+                                        📅 วันที่เข้างาน: {selectedTicket.PlannedDate ? new Date(selectedTicket.PlannedDate).toLocaleDateString('th-TH') : 'ยังไม่ได้ระบุ'}
+                                    </p>
                                 </div>
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                             </div>

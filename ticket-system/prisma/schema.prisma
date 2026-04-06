@@ -39,6 +39,7 @@ model RepairTicket {
   ImageURL      String?
   Priority      String          @default("Medium")
   CurrentStatus String          @default("Planed")
+  PlannedDate   DateTime?
   SLA_Deadline  DateTime?
   TotalCost     Float?
   CSAT_Score    Int?
