@@ -8,7 +8,7 @@ export async function createTicket(formData: {
     description: string;
     branchId: string;
     imageURL?: string;
-    plannedDate?: string;
+    requestDate?: string;
 }) {
     try {
         // ในระบบจริงต้องดึง UserID จาก Session
@@ -36,7 +36,7 @@ export async function createTicket(formData: {
                 UserID: user.UserID,
                 CurrentStatus: 'Open',
                 Priority: 'Medium',
-                PlannedDate: formData.plannedDate ? new Date(formData.plannedDate) : null
+                RequestDate: formData.requestDate ? new Date(formData.requestDate) : null
             }
         });
 
@@ -84,14 +84,14 @@ export async function getAllTickets() {
     });
 }
 
-export async function updateTicketStatus(ticketId: string, status: string, note?: string, technician?: string) {
+export async function updateTicketStatus(ticketId: string, status: string, note?: string, technician?: string, actualDate?: string) {
     try {
         await prisma.repairTicket.update({
             where: { TicketID: ticketId },
             data: {
                 CurrentStatus: status,
                 Technician: technician,
-                PlannedDate: status === "Planed" || status === "In Progress" ? new Date() : undefined // หรือส่งค่าอื่นตามต้องการ
+                ActualDate: actualDate ? new Date(actualDate) : undefined
             }
         });
 

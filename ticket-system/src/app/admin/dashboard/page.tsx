@@ -55,6 +55,7 @@ export default function AdminDashboard() {
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
     const [selectedTech, setSelectedTech] = useState('');
+    const [adminActualDate, setAdminActualDate] = useState('');
 
     const fetchTickets = async () => {
         try {
@@ -78,6 +79,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (selectedTicket) {
             setSelectedTech(selectedTicket.Technician || '');
+            setAdminActualDate(selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toISOString().split('T')[0] : '');
         }
     }, [selectedTicket]);
 
@@ -114,9 +116,10 @@ export default function AdminDashboard() {
     };
 
     const handleUpdateStatus = async (id: string, newStatus: string) => {
-        const result = await updateTicketStatus(id, newStatus, techNote, selectedTech);
+        const result = await updateTicketStatus(id, newStatus, techNote, selectedTech, adminActualDate);
         if (result.success) {
             setTechNote('');
+            setAdminActualDate('');
             await fetchTickets();
         } else {
             alert("เกิดข้อผิดพลาดในการอัปเดต");
@@ -252,7 +255,8 @@ export default function AdminDashboard() {
                                         <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
                                         <th style={{ padding: '1.2rem' }}>สาขา</th>
                                         <th style={{ padding: '1.2rem' }}>วันที่แจ้ง</th>
-                                        <th style={{ padding: '1.2rem' }}>วันที่เข้างาน</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่ช่างเข้าจริง</th>
                                         <th style={{ padding: '1.2rem' }}>จัดการ</th>
                                     </tr>
                                 </thead>
@@ -271,7 +275,10 @@ export default function AdminDashboard() {
                                             <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
                                             <td style={{ padding: '1.1rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
                                             <td style={{ padding: '1.1rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
-                                                {t.PlannedDate ? new Date(t.PlannedDate).toLocaleDateString('th-TH') : '-'}
+                                                {t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : '-'}
+                                            </td>
+                                            <td style={{ padding: '1.1rem', color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                                {t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : '-'}
                                             </td>
                                             <td style={{ padding: '1.1rem' }}>
                                                 <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
@@ -320,9 +327,14 @@ export default function AdminDashboard() {
                                     <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
                                     <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Symptom}</h2>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
-                                    <p style={{ color: 'var(--accent-primary)', fontSize: '0.95rem', fontWeight: 'bold', marginTop: '0.3rem' }}>
-                                        📅 วันที่เข้างาน: {selectedTicket.PlannedDate ? new Date(selectedTicket.PlannedDate).toLocaleDateString('th-TH') : 'ยังไม่ได้ระบุ'}
-                                    </p>
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                                        <p style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                                            📅 วันที่สาขาแจ้ง: {selectedTicket.RequestDate ? new Date(selectedTicket.RequestDate).toLocaleDateString('th-TH') : 'ไม่ได้ระบุ'}
+                                        </p>
+                                        <p style={{ color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                            🛠️ วันที่ช่างเข้าจริง: {selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toLocaleDateString('th-TH') : 'ยังไม่ระบุ'}
+                                        </p>
+                                    </div>
                                 </div>
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                             </div>
@@ -378,6 +390,17 @@ export default function AdminDashboard() {
                                         <option key={t} value={t}>{t}</option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ระบุวันที่ช่างเข้าจริง:</label>
+                                <input
+                                    type="date"
+                                    className="input-glass"
+                                    style={{ background: '#fff' }}
+                                    value={adminActualDate}
+                                    onChange={e => setAdminActualDate(e.target.value)}
+                                />
                             </div>
 
                             <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>

@@ -21,7 +21,7 @@ function NewTicketForm() {
         symptom: '',
         description: '',
         branchId: '1024',
-        plannedDate: ''
+        requestDate: ''
     });
 
     useEffect(() => {
@@ -160,12 +160,12 @@ function NewTicketForm() {
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>วันที่ต้องการให้เข้างาน</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>วันที่ต้องการให้เข้างาน (สาขาระบุ)</label>
                         <input
                             type="date"
                             className="input-glass"
-                            value={formData.plannedDate}
-                            onChange={e => setFormData({ ...formData, plannedDate: e.target.value })}
+                            value={formData.requestDate}
+                            onChange={e => setFormData({ ...formData, requestDate: e.target.value })}
                         />
                     </div>
 
