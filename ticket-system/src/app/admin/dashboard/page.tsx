@@ -337,14 +337,16 @@ export default function AdminDashboard() {
                     <div style={{
                         width: '100%',
                         maxWidth: '850px',
-                        maxHeight: '90vh',
+                        maxHeight: '95vh',
                         background: '#fff',
                         borderRadius: '30px',
                         padding: '0',
                         display: 'flex',
+                        flexDirection: 'row', // Default to row
                         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-                        overflow: 'hidden'
-                    }} onClick={e => e.stopPropagation()}>
+                        overflow: 'hidden',
+                        position: 'relative'
+                    }} className="modal-container-responsive" onClick={e => e.stopPropagation()}>
 
                         {/* Detail Left */}
                         <div style={{ flex: 1.2, padding: '2rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9' }}>
@@ -454,7 +456,7 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
 
-                            <button onClick={() => setSelectedTicket(null)} style={{ marginTop: 'auto', padding: '1rem', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }}>ปิด</button>
+                            <button onClick={() => setSelectedTicket(null)} style={{ marginTop: 'auto', padding: '1rem', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} className="modal-close-btn">ปิดหน้านี้</button>
                         </div>
                     </div>
                 </div>

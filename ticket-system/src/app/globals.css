@@ -224,6 +224,36 @@ h6 {
   display: none;
 }
 
+/* Modal Responsive Fix */
+@media (max-width: 768px) {
+  .modal-container-responsive {
+    flex-direction: column !important;
+    max-height: 98vh !important;
+    border-radius: 15px !important;
+    overflow-y: auto !important;
+  }
+
+  .modal-container-responsive>div {
+    flex: none !important;
+    width: 100% !important;
+    border-right: none !important;
+    padding: 1.2rem !important;
+  }
+
+  .modal-container-responsive>div:first-child {
+    border-bottom: 2px dashed #f1f5f9;
+  }
+
+  .modal-container-responsive h2 {
+    font-size: 1.3rem !important;
+  }
+
+  .modal-close-btn {
+    margin-top: 1.5rem !important;
+    width: 100% !important;
+  }
+}
+
 @media (max-width: 480px) {
   .nav-brand {
     font-size: 1rem;
