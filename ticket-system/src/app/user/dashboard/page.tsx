@@ -126,8 +126,9 @@ export default function UserTicketList() {
                                         <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
                                         <th style={{ padding: '1.2rem' }}>อัปเดตล่าสุด</th>
                                         <th style={{ padding: '1.2rem' }}>สถานะ</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่ช่างเข้าจริง</th>
                                         <th style={{ padding: '1.2rem' }}>ช่างที่รับผิดชอบ</th>
-                                        <th style={{ padding: '1.2rem' }}>ข้อความล่าสุด</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -155,11 +156,14 @@ export default function UserTicketList() {
                                                             border: getSLAColor(ticket) ? 'none' : `1px solid ${statusColor(ticket.CurrentStatus)}30`
                                                         }}>{translateStatus(ticket.CurrentStatus)}</span>
                                                     </td>
-                                                    <td style={{ padding: '1.1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                        {ticket.Technician || '-'}
+                                                    <td style={{ padding: '1.1rem', fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                                                        {ticket.RequestDate ? new Date(ticket.RequestDate).toLocaleDateString('th-TH') : '-'}
+                                                    </td>
+                                                    <td style={{ padding: '1.1rem', fontSize: '0.9rem', color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                                        {ticket.ActualDate ? new Date(ticket.ActualDate).toLocaleDateString('th-TH') : '-'}
                                                     </td>
                                                     <td style={{ padding: '1.1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                        {latestHistory?.Note ? `💬 ${latestHistory.Note}` : '-'}
+                                                        {ticket.Technician || '-'}
                                                     </td>
                                                 </tr>
                                             );
@@ -215,6 +219,14 @@ export default function UserTicketList() {
                             <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedTicket.CreatedAt).toLocaleDateString('th-TH')}</span>
+                            </div>
+                            <div style={{ marginTop: '0.8rem', padding: '0.8rem', background: '#fff', borderRadius: '10px', fontSize: '0.9rem', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                <div style={{ color: 'var(--accent-primary)', fontWeight: 'bold', marginBottom: '0.3rem' }}>
+                                    📅 วันที่ขอเข้างาน: {selectedTicket.RequestDate ? new Date(selectedTicket.RequestDate).toLocaleDateString('th-TH') : 'ไม่ได้ระบุ'}
+                                </div>
+                                <div style={{ color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                    🛠️ วันที่ช่างเข้าจริง: {selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toLocaleDateString('th-TH') : 'รอยืนยันจากแอดมิน'}
+                                </div>
                             </div>
                         </div>
 
