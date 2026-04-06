@@ -124,6 +124,7 @@ export default function UserTicketList() {
                                     <tr style={{ background: 'rgba(30, 58, 138, 0.05)' }}>
                                         <th style={{ padding: '1.2rem' }}>รหัส</th>
                                         <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
+                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
                                         <th style={{ padding: '1.2rem' }}>อัปเดตล่าสุด</th>
                                         <th style={{ padding: '1.2rem' }}>สถานะ</th>
                                         <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
@@ -148,6 +149,7 @@ export default function UserTicketList() {
                                                 >
                                                     <td style={{ padding: '1.2rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{ticket.TicketID.substring(0, 8).toUpperCase()}</td>
                                                     <td style={{ padding: '1.1rem' }}>{ticket.Symptom}</td>
+                                                    <td style={{ padding: '1.1rem', color: 'var(--accent-secondary)', fontWeight: '600' }}>{ticket.Product}</td>
                                                     <td style={{ padding: '1.1rem' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</td>
                                                     <td style={{ padding: '1.1rem' }}>
                                                         <span className="badge" style={{
@@ -209,8 +211,9 @@ export default function UserTicketList() {
                         </div>
 
                         <div style={{ marginBottom: '1.5rem', background: 'rgba(30,58,138,0.03)', padding: '1.2rem', borderRadius: '15px' }}>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>หมวดหมู่ปัญหา</label>
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>หมวดหมู่ปัญหา / อุปกรณ์</label>
                             <p style={{ fontSize: '1.2rem', fontWeight: '700', margin: '0 0 0.5rem 0' }}>{selectedTicket.Symptom}</p>
+                            <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.8rem' }}>📦 อุปกรณ์: {selectedTicket.Product}</p>
                             {selectedTicket.Technician && (
                                 <div style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                                     ช่างที่รับผิดชอบ: {selectedTicket.Technician}

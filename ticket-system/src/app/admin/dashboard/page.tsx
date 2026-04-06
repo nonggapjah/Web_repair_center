@@ -253,6 +253,7 @@ export default function AdminDashboard() {
                                         <th style={{ padding: '1.2rem' }}>สถานะ</th>
                                         <th style={{ padding: '1.2rem' }}>รหัส</th>
                                         <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
+                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
                                         <th style={{ padding: '1.2rem' }}>สาขา</th>
                                         <th style={{ padding: '1.2rem' }}>วันที่แจ้ง</th>
                                         <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
@@ -272,6 +273,7 @@ export default function AdminDashboard() {
                                             </td>
                                             <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
                                             <td style={{ padding: '1.1rem' }}>{t.Symptom}</td>
+                                            <td style={{ padding: '1.1rem', color: 'var(--accent-secondary)', fontWeight: '600' }}>{t.Product}</td>
                                             <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
                                             <td style={{ padding: '1.1rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
                                             <td style={{ padding: '1.1rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
@@ -326,6 +328,9 @@ export default function AdminDashboard() {
                                 <div>
                                     <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
                                     <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Symptom}</h2>
+                                    <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                                        📦 อุปกรณ์: {selectedTicket.Product}
+                                    </p>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
                                     <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
                                         <p style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>
