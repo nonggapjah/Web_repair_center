@@ -246,8 +246,9 @@ export default function AdminDashboard() {
                             </div>
                         </DragDropContext>
                     ) : (
-                        <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
-                            <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                        <div className="responsive-table-container">
+                            {/* Desktop Table View */}
+                            <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse' }} className="desktop-only">
                                 <thead>
                                     <tr style={{ background: 'rgba(30,58,138,0.05)' }}>
                                         <th style={{ padding: '1.2rem' }}>สถานะ</th>
@@ -289,6 +290,29 @@ export default function AdminDashboard() {
                                     ))}
                                 </tbody>
                             </table>
+
+                            {/* Mobile Card View */}
+                            <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {tickets.map(t => (
+                                    <div key={t.TicketID} className="glass-panel" onClick={() => setSelectedTicket(t)} style={{ padding: '1.2rem', position: 'relative' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
+                                            <span className="badge" style={{
+                                                background: getSLAColor(t) || `${statusColor(t.CurrentStatus)}15`,
+                                                color: getSLAColor(t) ? '#fff' : statusColor(t.CurrentStatus),
+                                            }}>{translateStatus(t.CurrentStatus)}</span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>#{t.TicketID.substring(0, 8).toUpperCase()}</span>
+                                        </div>
+                                        <h3 style={{ fontSize: '1.15rem', marginBottom: '0.3rem' }}>{t.Symptom}</h3>
+                                        <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>📦 {t.Product}</p>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                            <div>📍 {t.Branch?.BranchName || t.BranchID}</div>
+                                            <div>📅 {new Date(t.CreatedAt).toLocaleDateString('th-TH')}</div>
+                                            <div style={{ color: 'var(--accent-primary)' }}>🕒 ขอเข้า: {t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : '-'}</div>
+                                            <div style={{ color: 'var(--accent-success)' }}>🛠️ เข้าจริง: {t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : '-'}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
