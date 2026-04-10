@@ -58,6 +58,8 @@ export default function AdminDashboard() {
     const [actualDate, setActualDate] = useState('');
     const [pendingStatus, setPendingStatus] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [showHeader, setShowHeader] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
 
     const fetchTickets = async () => {
         try {
@@ -111,6 +113,21 @@ export default function AdminDashboard() {
             setIsUpdating(false);
         }
     };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                setShowHeader(false); // Scrolling down
+            } else {
+                setShowHeader(true); // Scrolling up
+            }
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
 
     const handleLogout = async () => {
         await logout();
@@ -185,13 +202,31 @@ export default function AdminDashboard() {
     );
 
     return (
-        <>
-            <main className="container" style={{ padding: '2rem 1rem', maxWidth: '1600px', margin: '0 auto' }}>
-                <div className="animate-fade-in">
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                        <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.9rem' }}>Logout</button>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <nav className="navbar" style={{
+                position: 'fixed',
+                width: '100%',
+                top: showHeader ? '0' : '-100px',
+                transition: 'top 0.3s ease-in-out',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 2px 15px rgba(0,0,0,0.05)',
+                zIndex: 1000
+            }}>
+                <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 2rem' }}>
+                    <div className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🏠</span>
+                        <div>
+                            <div style={{ fontSize: '1rem', fontWeight: '800', lineHeight: '1.1' }}>ระบบซ่อมบำรุง</div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Villa Market</div>
+                        </div>
                     </div>
+                    <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>Logout</button>
+                </div>
+            </nav>
 
+            <main className="container" style={{ padding: '6rem 1rem 2rem', maxWidth: '1600px', margin: '0 auto', flex: 1 }}>
+                <div className="animate-fade-in">
                     <div className="flex-mobile-col" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', gap: '1rem' }}>
                         <div>
                             <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--accent-primary)' }}>Dashboard</h1>
@@ -238,23 +273,45 @@ export default function AdminDashboard() {
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                                {/* Modern Workload Chart */}
+                                {/* Modern Workload Chart with Details */}
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>� ภาระงานรายบุคคล (Workload)</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📈 งานในมือช่าง (Active Tasks)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
                                         {technicians.map(tech => {
                                             const techTickets = tickets.filter(t => t.Technician === tech && t.CurrentStatus !== 'Closed');
-                                            const total = tickets.length || 1;
-                                            const width = (techTickets.length / total) * 100;
                                             return (
                                                 <div key={tech}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                                                        <span style={{ fontWeight: '700' }}>ช่าง {tech}</span>
-                                                        <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{techTickets.length} เคส</span>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', alignItems: 'center' }}>
+                                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)' }}>ช่าง {tech}</span>
+                                                        <span className="badge" style={{ background: 'rgba(30,58,138,0.1)', color: 'var(--accent-primary)', fontSize: '0.75rem' }}>{techTickets.length} งาน</span>
                                                     </div>
-                                                    <div style={{ height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${Math.max(width * 5, 2)}%`, height: '100%', background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)', borderRadius: '6px' }}></div>
-                                                    </div>
+
+                                                    {techTickets.length > 0 ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            {techTickets.map(t => (
+                                                                <div
+                                                                    key={t.TicketID}
+                                                                    onClick={() => setSelectedTicket(t)}
+                                                                    style={{
+                                                                        background: '#f8fafc',
+                                                                        padding: '0.8rem',
+                                                                        borderRadius: '12px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        justifyContent: 'space-between',
+                                                                        alignItems: 'center',
+                                                                        border: '1px solid #e2e8f0'
+                                                                    }}
+                                                                >
+                                                                    <div style={{ fontWeight: '600' }}>#{t.TicketID.substring(0, 5)} - {t.Symptom}</div>
+                                                                    <div style={{ fontSize: '0.7rem', color: (statusColor(t.CurrentStatus)), fontWeight: 'bold' }}>{translateStatus(t.CurrentStatus)}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ height: '4px', background: '#f1f5f9', borderRadius: '2px' }}></div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
