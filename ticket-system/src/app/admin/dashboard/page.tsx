@@ -233,25 +233,33 @@ export default function AdminDashboard() {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
                                     {/* Modern Workload Chart with Details */}
                                     <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📈 งานในมือช่าง (Active Tasks)</h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
+                                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📈 ภาระงานและผลงานช่าง (Workload & Stats)</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                             {technicians.map(tech => {
-                                                const techTickets = tickets.filter(t => t.Technician === tech && t.CurrentStatus !== 'Closed');
+                                                const techAllTickets = tickets.filter(t => t.Technician === tech);
+                                                const activeTickets = techAllTickets.filter(t => ['Open', 'Accepted', 'Repairing', 'On Process'].includes(t.CurrentStatus));
+                                                const waitingTickets = techAllTickets.filter(t => t.CurrentStatus === 'Waiting Parts');
+                                                const doneTickets = techAllTickets.filter(t => t.CurrentStatus === 'Completed' || t.CurrentStatus === 'Closed');
+
                                                 return (
-                                                    <div key={tech}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', alignItems: 'center' }}>
-                                                            <span style={{ fontWeight: '800', color: 'var(--accent-primary)' }}>ช่าง {tech}</span>
-                                                            <span className="badge" style={{ background: 'rgba(30,58,138,0.1)', color: 'var(--accent-primary)', fontSize: '0.75rem' }}>{techTickets.length} งาน</span>
+                                                    <div key={tech} style={{ paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                            <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.05rem' }}>ช่าง {tech}</span>
+                                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                                <span title="เสร็จแล้ว" style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>✅ {doneTickets.length}</span>
+                                                                <span title="กำลังทำ" style={{ background: '#dbeafe', color: '#1e40af', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>🛠️ {activeTickets.length}</span>
+                                                                <span title="รออะไหล่" style={{ background: '#fef3c7', color: '#92400e', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>📦 {waitingTickets.length}</span>
+                                                            </div>
                                                         </div>
 
-                                                        {techTickets.length > 0 ? (
+                                                        {(activeTickets.length > 0 || waitingTickets.length > 0) ? (
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                {techTickets.map(t => (
+                                                                {[...activeTickets, ...waitingTickets].map(t => (
                                                                     <div
                                                                         key={t.TicketID}
                                                                         onClick={() => setSelectedTicket(t)}
                                                                         style={{
-                                                                            background: '#f8fafc',
+                                                                            background: '#fff',
                                                                             padding: '0.8rem',
                                                                             borderRadius: '12px',
                                                                             fontSize: '0.8rem',
@@ -259,16 +267,21 @@ export default function AdminDashboard() {
                                                                             display: 'flex',
                                                                             justifyContent: 'space-between',
                                                                             alignItems: 'center',
-                                                                            border: '1px solid #e2e8f0'
+                                                                            border: '1px solid #e2e8f0',
+                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                                                                         }}
                                                                     >
-                                                                        <div style={{ fontWeight: '600' }}>#{t.TicketID.substring(0, 5)} - {t.Symptom}</div>
-                                                                        <div style={{ fontSize: '0.7rem', color: (statusColor(t.CurrentStatus)), fontWeight: 'bold' }}>{translateStatus(t.CurrentStatus)}</div>
+                                                                        <div style={{ fontWeight: '600', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                            #{t.TicketID.substring(0, 5)} - {t.Symptom}
+                                                                        </div>
+                                                                        <div style={{ fontSize: '0.7rem', color: (statusColor(t.CurrentStatus)), fontWeight: '800' }}>
+                                                                            {translateStatus(t.CurrentStatus)}
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
                                                         ) : (
-                                                            <div style={{ height: '4px', background: '#f1f5f9', borderRadius: '2px' }}></div>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>ไม่มีงานค้างในมือ</div>
                                                         )}
                                                     </div>
                                                 );
@@ -276,19 +289,45 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* Simplified Category List */}
+                                    {/* Categorized Bar Chart */}
                                     <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>🔍 สรุปประเภทปัญหา</h3>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem' }}>
-                                            {Object.entries(tickets.reduce((acc: any, t) => {
-                                                acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
-                                                return acc;
-                                            }, {})).sort((a: any, b: any) => b[1] - a[1]).map(([sym, count]: any) => (
-                                                <div key={sym} style={{ background: '#f1f5f9', padding: '0.6rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                                    <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{sym}</span>
-                                                    <span style={{ background: 'var(--accent-primary)', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '6px', fontSize: '0.75rem' }}>{count}</span>
-                                                </div>
-                                            ))}
+                                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>🔍 สรุปประเภทปัญหา (Category Analysis)</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                            {(() => {
+                                                const stats = tickets.reduce((acc: any, t) => {
+                                                    acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
+                                                    return acc;
+                                                }, {});
+                                                const total = tickets.length || 1;
+                                                const sortedEntries = Object.entries(stats).sort((a: any, b: any) => b[1] - a[1]);
+
+                                                return sortedEntries.map(([sym, count]: any, i) => {
+                                                    const percentage = Math.round((count / total) * 100);
+                                                    // Assign colors based on index or category
+                                                    const barColors = ['#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
+                                                    const color = barColors[i % barColors.length];
+
+                                                    return (
+                                                        <div key={sym}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
+                                                                <span style={{ fontWeight: '700' }}>{sym}</span>
+                                                                <span style={{ fontWeight: '800' }}>{count} เคส ({percentage}%)</span>
+                                                            </div>
+                                                            <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                                                <div
+                                                                    style={{
+                                                                        width: `${percentage}%`,
+                                                                        height: '100%',
+                                                                        background: color,
+                                                                        borderRadius: '5px',
+                                                                        transition: 'width 1s ease-in-out'
+                                                                    }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
