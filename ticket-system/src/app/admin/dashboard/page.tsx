@@ -113,525 +113,523 @@ export default function AdminDashboard() {
     };
 
     const onDragEnd = async (result: DropResult) => {
+        if (!result.destination) return;
+        const { source, destination, draggableId } = result;
+        if (source.droppableId === destination.droppableId) return;
 
-        const onDragEnd = async (result: DropResult) => {
-            if (!result.destination) return;
-            const { source, destination, draggableId } = result;
-            if (source.droppableId === destination.droppableId) return;
+        if (destination.droppableId === 'Closed') {
+            alert("สถานะ 'ปิดงานถาวร' ต้องให้ทางสาขาเป็นผู้กดยืนยันเท่านั้น");
+            return;
+        }
 
-            if (destination.droppableId === 'Closed') {
-                alert("สถานะ 'ปิดงานถาวร' ต้องให้ทางสาขาเป็นผู้กดยืนยันเท่านั้น");
-                return;
+        const oldTickets = [...tickets];
+        setTickets(prev => prev.map(t => {
+            if (t.TicketID === draggableId) {
+                return { ...t, CurrentStatus: destination.droppableId };
             }
-
-            const oldTickets = [...tickets];
-            setTickets(prev => prev.map(t => {
-                if (t.TicketID === draggableId) {
-                    return { ...t, CurrentStatus: destination.droppableId };
-                }
-                return t;
-            }));
-
-            const updateResult = await updateTicketStatus(draggableId, destination.droppableId);
-            if (!updateResult.success) {
-                setTickets(oldTickets);
-                alert("ไม่สามารถอัปเดตสถานะได้");
-            } else {
-                fetchTickets();
-            }
-        };
-
-        const handleExport = () => {
-            const headers = ["Ticket ID", "Status", "หมวดหมู่", "สาขา", "ช่างที่รับผิดชอบ", "รายละเอียด", "วันที่แจ้ง"];
-            const csvRows = [headers.join(",")];
-
-            tickets.forEach(t => {
-                const row = [
-                    t.TicketID.substring(0, 8).toUpperCase(),
-                    translateStatus(t.CurrentStatus),
-                    t.Symptom,
-                    t.Branch?.BranchName || t.BranchID,
-                    t.Technician || "-",
-                    (t.Description || "").replace(/,/g, " ").replace(/\n/g, " "),
-                    new Date(t.CreatedAt).toLocaleString('th-TH')
-                ];
-                csvRows.push(row.join(","));
-            });
-
-            const csvString = "\uFEFF" + csvRows.join("\n");
-            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `repair_tickets_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-
-        const columns = statuses.map(status => ({
-            status,
-            items: tickets.filter(t => t.CurrentStatus === status)
+            return t;
         }));
 
-        if (isLoading) return (
-            <div style={{ textAlign: 'center', padding: '5rem' }}>
-                <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลแอดมิน...</p>
-            </div>
-        );
+        const updateResult = await updateTicketStatus(draggableId, destination.droppableId);
+        if (!updateResult.success) {
+            setTickets(oldTickets);
+            alert("ไม่สามารถอัปเดตสถานะได้");
+        } else {
+            fetchTickets();
+        }
+    };
 
-        return (
-            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-                <main className="container" style={{ padding: '6rem 1rem 2rem', maxWidth: '1600px', margin: '0 auto', flex: 1 }}>
-                    <div className="animate-fade-in">
-                        <div className="flex-mobile-col" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', gap: '1rem' }}>
-                            <div>
-                                <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--accent-primary)' }}>Dashboard</h1>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>สรุปภาพรวมและจัดการระบบแจ้งซ่อม</p>
+    const handleExport = () => {
+        const headers = ["Ticket ID", "Status", "หมวดหมู่", "สาขา", "ช่างที่รับผิดชอบ", "รายละเอียด", "วันที่แจ้ง"];
+        const csvRows = [headers.join(",")];
+
+        tickets.forEach(t => {
+            const row = [
+                t.TicketID.substring(0, 8).toUpperCase(),
+                translateStatus(t.CurrentStatus),
+                t.Symptom,
+                t.Branch?.BranchName || t.BranchID,
+                t.Technician || "-",
+                (t.Description || "").replace(/,/g, " ").replace(/\n/g, " "),
+                new Date(t.CreatedAt).toLocaleString('th-TH')
+            ];
+            csvRows.push(row.join(","));
+        });
+
+        const csvString = "\uFEFF" + csvRows.join("\n");
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `repair_tickets_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const columns = statuses.map(status => ({
+        status,
+        items: tickets.filter(t => t.CurrentStatus === status)
+    }));
+
+    if (isLoading) return (
+        <div style={{ textAlign: 'center', padding: '5rem' }}>
+            <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลแอดมิน...</p>
+        </div>
+    );
+
+    return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <main className="container" style={{ padding: '6rem 1rem 2rem', maxWidth: '1600px', margin: '0 auto', flex: 1 }}>
+                <div className="animate-fade-in">
+                    <div className="flex-mobile-col" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', gap: '1rem' }}>
+                        <div>
+                            <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--accent-primary)' }}>Dashboard</h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>สรุปภาพรวมและจัดการระบบแจ้งซ่อม</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <button onClick={handleExport} className="btn-secondary" style={{
+                                padding: '0.6rem 1rem',
+                                border: '1px solid var(--accent-primary)',
+                                color: 'var(--accent-primary)',
+                                background: '#fff',
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '0.85rem'
+                            }}>
+                                📥 Export
+                            </button>
+                            <div style={{ padding: '0.3rem', background: '#e2e8f0', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
+                                <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>สรุป</button>
+                                <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>บอร์ด</button>
+                                <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>ตาราง</button>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <button onClick={handleExport} className="btn-secondary" style={{
-                                    padding: '0.6rem 1rem',
-                                    border: '1px solid var(--accent-primary)',
-                                    color: 'var(--accent-primary)',
-                                    background: '#fff',
-                                    borderRadius: '12px',
-                                    cursor: 'pointer',
-                                    fontWeight: '600',
-                                    fontSize: '0.85rem'
-                                }}>
-                                    📥 Export
-                                </button>
-                                <div style={{ padding: '0.3rem', background: '#e2e8f0', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                                    <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>สรุป</button>
-                                    <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>บอร์ด</button>
-                                    <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>ตาราง</button>
+                        </div>
+                    </div>
+
+                    {viewMode === 'overview' && (
+                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {/* Summary Cards with Icons */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.2rem' }}>
+                                {[
+                                    { label: 'งานรวม', count: tickets.length, color: 'var(--accent-primary)', icon: '📋' },
+                                    { label: 'รอดำเนินการ', count: tickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
+                                    { label: 'กำลังซ่อม', count: tickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
+                                    { label: 'รออะไหล่', count: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444', icon: '📦' },
+                                    { label: 'สำเร็จ', count: tickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
+                                ].map((card, i) => (
+                                    <div key={i} className="glass-panel" style={{ padding: '1.2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', borderRadius: '20px' }}>
+                                        <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.icon}</div>
+                                        <div style={{ color: card.color, fontSize: '2rem', fontWeight: '800' }}>{card.count}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: '600' }}>{card.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                                {/* Modern Workload Chart with Details */}
+                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📈 ภาระงานและผลงานช่าง (Workload & Stats)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                        {technicians.map(tech => {
+                                            const techAllTickets = tickets.filter(t => t.Technician === tech);
+                                            const activeTickets = techAllTickets.filter(t => ['Open', 'Accepted', 'Repairing', 'On Process'].includes(t.CurrentStatus));
+                                            const waitingTickets = techAllTickets.filter(t => t.CurrentStatus === 'Waiting Parts');
+                                            const doneTickets = techAllTickets.filter(t => t.CurrentStatus === 'Completed' || t.CurrentStatus === 'Closed');
+
+                                            return (
+                                                <div key={tech} style={{ paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.05rem' }}>ช่าง {tech}</span>
+                                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                            <span title="เสร็จแล้ว" style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>✅ {doneTickets.length}</span>
+                                                            <span title="กำลังทำ" style={{ background: '#dbeafe', color: '#1e40af', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>🛠️ {activeTickets.length}</span>
+                                                            <span title="รออะไหล่" style={{ background: '#fef3c7', color: '#92400e', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>📦 {waitingTickets.length}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {(activeTickets.length > 0 || waitingTickets.length > 0) ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            {[...activeTickets, ...waitingTickets].map(t => (
+                                                                <div
+                                                                    key={t.TicketID}
+                                                                    onClick={() => setSelectedTicket(t)}
+                                                                    style={{
+                                                                        background: '#fff',
+                                                                        padding: '0.8rem',
+                                                                        borderRadius: '12px',
+                                                                        fontSize: '0.8rem',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        justifyContent: 'space-between',
+                                                                        alignItems: 'center',
+                                                                        border: '1px solid #e2e8f0',
+                                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                                    }}
+                                                                >
+                                                                    <div style={{ fontWeight: '600', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                        #{t.TicketID.substring(0, 5)} - {t.Symptom}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '0.7rem', color: (statusColor(t.CurrentStatus)), fontWeight: '800' }}>
+                                                                        {translateStatus(t.CurrentStatus)}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>ไม่มีงานค้างในมือ</div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Categorized Bar Chart */}
+                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>🔍 สรุปประเภทปัญหา (Category Analysis)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                        {(() => {
+                                            const stats = tickets.reduce((acc: any, t) => {
+                                                acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
+                                                return acc;
+                                            }, {});
+                                            const total = tickets.length || 1;
+                                            const sortedEntries = Object.entries(stats).sort((a: any, b: any) => b[1] - a[1]);
+
+                                            return sortedEntries.map(([sym, count]: any, i) => {
+                                                const percentage = Math.round((count / total) * 100);
+                                                // Assign colors based on index or category
+                                                const barColors = ['#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
+                                                const color = barColors[i % barColors.length];
+
+                                                return (
+                                                    <div key={sym}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
+                                                            <span style={{ fontWeight: '700' }}>{sym}</span>
+                                                            <span style={{ fontWeight: '800' }}>{count} เคส ({percentage}%)</span>
+                                                        </div>
+                                                        <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                                            <div
+                                                                style={{
+                                                                    width: `${percentage}%`,
+                                                                    height: '100%',
+                                                                    background: color,
+                                                                    borderRadius: '5px',
+                                                                    transition: 'width 1s ease-in-out'
+                                                                }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    )}
 
-                        {viewMode === 'overview' && (
-                            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                {/* Summary Cards with Icons */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.2rem' }}>
-                                    {[
-                                        { label: 'งานรวม', count: tickets.length, color: 'var(--accent-primary)', icon: '📋' },
-                                        { label: 'รอดำเนินการ', count: tickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
-                                        { label: 'กำลังซ่อม', count: tickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
-                                        { label: 'รออะไหล่', count: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444', icon: '📦' },
-                                        { label: 'สำเร็จ', count: tickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
-                                    ].map((card, i) => (
-                                        <div key={i} className="glass-panel" style={{ padding: '1.2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', borderRadius: '20px' }}>
-                                            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.icon}</div>
-                                            <div style={{ color: card.color, fontSize: '2rem', fontWeight: '800' }}>{card.count}</div>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: '600' }}>{card.label}</div>
+                    {viewMode === 'kanban' && (
+                        <DragDropContext onDragEnd={onDragEnd}>
+                            <div className="responsive-table-container" style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
+                                {columns.map(col => (
+                                    <div key={col.status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
+                                            <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{translateStatus(col.status)}</h3>
+                                            <span style={{ background: 'rgba(30,58,138,0.1)', color: 'var(--accent-primary)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.8rem' }}>{col.items.length}</span>
                                         </div>
-                                    ))}
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                                    {/* Modern Workload Chart with Details */}
-                                    <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📈 ภาระงานและผลงานช่าง (Workload & Stats)</h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                            {technicians.map(tech => {
-                                                const techAllTickets = tickets.filter(t => t.Technician === tech);
-                                                const activeTickets = techAllTickets.filter(t => ['Open', 'Accepted', 'Repairing', 'On Process'].includes(t.CurrentStatus));
-                                                const waitingTickets = techAllTickets.filter(t => t.CurrentStatus === 'Waiting Parts');
-                                                const doneTickets = techAllTickets.filter(t => t.CurrentStatus === 'Completed' || t.CurrentStatus === 'Closed');
-
-                                                return (
-                                                    <div key={tech} style={{ paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                            <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.05rem' }}>ช่าง {tech}</span>
-                                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                                <span title="เสร็จแล้ว" style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>✅ {doneTickets.length}</span>
-                                                                <span title="กำลังทำ" style={{ background: '#dbeafe', color: '#1e40af', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>🛠️ {activeTickets.length}</span>
-                                                                <span title="รออะไหล่" style={{ background: '#fef3c7', color: '#92400e', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>📦 {waitingTickets.length}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {(activeTickets.length > 0 || waitingTickets.length > 0) ? (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                {[...activeTickets, ...waitingTickets].map(t => (
-                                                                    <div
-                                                                        key={t.TicketID}
-                                                                        onClick={() => setSelectedTicket(t)}
-                                                                        style={{
-                                                                            background: '#fff',
-                                                                            padding: '0.8rem',
-                                                                            borderRadius: '12px',
-                                                                            fontSize: '0.8rem',
-                                                                            cursor: 'pointer',
-                                                                            display: 'flex',
-                                                                            justifyContent: 'space-between',
-                                                                            alignItems: 'center',
-                                                                            border: '1px solid #e2e8f0',
-                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                                                        }}
-                                                                    >
-                                                                        <div style={{ fontWeight: '600', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                            #{t.TicketID.substring(0, 5)} - {t.Symptom}
-                                                                        </div>
-                                                                        <div style={{ fontSize: '0.7rem', color: (statusColor(t.CurrentStatus)), fontWeight: '800' }}>
-                                                                            {translateStatus(t.CurrentStatus)}
-                                                                        </div>
+                                        <Droppable droppableId={col.status}>
+                                            {(provided, snapshot) => (
+                                                <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: snapshot.isDraggingOver ? 'rgba(30,58,138,0.03)' : 'rgba(0,0,0,0.02)', borderRadius: '16px', padding: '0.8rem' }}>
+                                                    {col.items.map((ticket, index) => (
+                                                        <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
+                                                            {(provided, snapshot) => (
+                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{
+                                                                    padding: '1rem',
+                                                                    marginBottom: '0.8rem',
+                                                                    background: '#fff',
+                                                                    boxShadow: snapshot.isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : 'var(--shadow-sm)',
+                                                                    borderLeft: getSLAColor(ticket) ? `4px solid ${getSLAColor(ticket)}` : 'none',
+                                                                    ...provided.draggableProps.style
+                                                                }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                                                                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</span>
+                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</span>
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>ไม่มีงานค้างในมือ</div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                                    <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Symptom}</h4>
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                                        {ticket.Branch?.BranchName || ticket.BranchID}
+                                                                        {ticket.Technician && <span style={{ marginLeft: '0.5rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>• {ticket.Technician}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </Draggable>
+                                                    ))}
+                                                    {provided.placeholder}
+                                                </div>
+                                            )}
+                                        </Droppable>
                                     </div>
-
-                                    {/* Categorized Bar Chart */}
-                                    <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>🔍 สรุปประเภทปัญหา (Category Analysis)</h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                            {(() => {
-                                                const stats = tickets.reduce((acc: any, t) => {
-                                                    acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
-                                                    return acc;
-                                                }, {});
-                                                const total = tickets.length || 1;
-                                                const sortedEntries = Object.entries(stats).sort((a: any, b: any) => b[1] - a[1]);
-
-                                                return sortedEntries.map(([sym, count]: any, i) => {
-                                                    const percentage = Math.round((count / total) * 100);
-                                                    // Assign colors based on index or category
-                                                    const barColors = ['#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
-                                                    const color = barColors[i % barColors.length];
-
-                                                    return (
-                                                        <div key={sym}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
-                                                                <span style={{ fontWeight: '700' }}>{sym}</span>
-                                                                <span style={{ fontWeight: '800' }}>{count} เคส ({percentage}%)</span>
-                                                            </div>
-                                                            <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                                                <div
-                                                                    style={{
-                                                                        width: `${percentage}%`,
-                                                                        height: '100%',
-                                                                        background: color,
-                                                                        borderRadius: '5px',
-                                                                        transition: 'width 1s ease-in-out'
-                                                                    }}
-                                                                ></div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                });
-                                            })()}
-                                        </div>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
-                        )}
+                        </DragDropContext>
+                    )}
 
-                        {viewMode === 'kanban' && (
-                            <DragDropContext onDragEnd={onDragEnd}>
-                                <div className="responsive-table-container" style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
-                                    {columns.map(col => (
-                                        <div key={col.status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
-                                                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{translateStatus(col.status)}</h3>
-                                                <span style={{ background: 'rgba(30,58,138,0.1)', color: 'var(--accent-primary)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.8rem' }}>{col.items.length}</span>
-                                            </div>
-                                            <Droppable droppableId={col.status}>
-                                                {(provided, snapshot) => (
-                                                    <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: snapshot.isDraggingOver ? 'rgba(30,58,138,0.03)' : 'rgba(0,0,0,0.02)', borderRadius: '16px', padding: '0.8rem' }}>
-                                                        {col.items.map((ticket, index) => (
-                                                            <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
-                                                                {(provided, snapshot) => (
-                                                                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{
-                                                                        padding: '1rem',
-                                                                        marginBottom: '0.8rem',
-                                                                        background: '#fff',
-                                                                        boxShadow: snapshot.isDragging ? '0 10px 25px rgba(0,0,0,0.1)' : 'var(--shadow-sm)',
-                                                                        borderLeft: getSLAColor(ticket) ? `4px solid ${getSLAColor(ticket)}` : 'none',
-                                                                        ...provided.draggableProps.style
-                                                                    }}>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                                                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</span>
-                                                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</span>
-                                                                        </div>
-                                                                        <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Symptom}</h4>
-                                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                                                            {ticket.Branch?.BranchName || ticket.BranchID}
-                                                                            {ticket.Technician && <span style={{ marginLeft: '0.5rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>• {ticket.Technician}</span>}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </Draggable>
-                                                        ))}
-                                                        {provided.placeholder}
-                                                    </div>
-                                                )}
-                                            </Droppable>
-                                        </div>
-                                    ))}
-                                </div>
-                            </DragDropContext>
-                        )}
-
-                        {viewMode === 'list' && (
-                            <div className="responsive-table-container">
-                                <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse' }} className="desktop-only">
-                                    <thead>
-                                        <tr style={{ background: 'rgba(30,58,138,0.05)' }}>
-                                            <th style={{ padding: '1.2rem' }}>สถานะ</th>
-                                            <th style={{ padding: '1.2rem' }}>รหัส</th>
-                                            <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
-                                            <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
-                                            <th style={{ padding: '1.2rem' }}>สาขา</th>
-                                            <th style={{ padding: '1.2rem' }}>วันที่แจ้ง</th>
-                                            <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
-                                            <th style={{ padding: '1.2rem' }}>วันที่ช่างเข้าจริง</th>
-                                            <th style={{ padding: '1.2rem' }}>จัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {tickets.map(t => (
-                                            <tr key={t.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }} className="hover-row">
-                                                <td style={{ padding: '1.1rem' }}>
-                                                    <span className="badge" style={{
-                                                        background: getSLAColor(t) || `${statusColor(t.CurrentStatus)}15`,
-                                                        color: getSLAColor(t) ? '#fff' : statusColor(t.CurrentStatus),
-                                                        border: getSLAColor(t) ? 'none' : `1px solid ${statusColor(t.CurrentStatus)}30`
-                                                    }}>{translateStatus(t.CurrentStatus)}</span>
-                                                </td>
-                                                <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
-                                                <td style={{ padding: '1.1rem' }}>{t.Symptom}</td>
-                                                <td style={{ padding: '1.1rem', color: 'var(--accent-secondary)', fontWeight: '600' }}>{t.Product}</td>
-                                                <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
-                                                <td style={{ padding: '1.1rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
-                                                <td style={{ padding: '1.1rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
-                                                    {t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : '-'}
-                                                </td>
-                                                <td style={{ padding: '1.1rem', color: 'var(--accent-success)', fontWeight: 'bold' }}>
-                                                    {t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : '-'}
-                                                </td>
-                                                <td style={{ padding: '1.1rem' }}>
-                                                    <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-
-                                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {viewMode === 'list' && (
+                        <div className="responsive-table-container">
+                            <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse' }} className="desktop-only">
+                                <thead>
+                                    <tr style={{ background: 'rgba(30,58,138,0.05)' }}>
+                                        <th style={{ padding: '1.2rem' }}>สถานะ</th>
+                                        <th style={{ padding: '1.2rem' }}>รหัส</th>
+                                        <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
+                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
+                                        <th style={{ padding: '1.2rem' }}>สาขา</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่แจ้ง</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
+                                        <th style={{ padding: '1.2rem' }}>วันที่ช่างเข้าจริง</th>
+                                        <th style={{ padding: '1.2rem' }}>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                     {tickets.map(t => (
-                                        <div key={t.TicketID} className="glass-panel" onClick={() => setSelectedTicket(t)} style={{ padding: '1.2rem', position: 'relative' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
+                                        <tr key={t.TicketID} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }} className="hover-row">
+                                            <td style={{ padding: '1.1rem' }}>
                                                 <span className="badge" style={{
                                                     background: getSLAColor(t) || `${statusColor(t.CurrentStatus)}15`,
                                                     color: getSLAColor(t) ? '#fff' : statusColor(t.CurrentStatus),
+                                                    border: getSLAColor(t) ? 'none' : `1px solid ${statusColor(t.CurrentStatus)}30`
                                                 }}>{translateStatus(t.CurrentStatus)}</span>
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>#{t.TicketID.substring(0, 8).toUpperCase()}</span>
-                                            </div>
-                                            <h3 style={{ fontSize: '1.15rem', marginBottom: '0.3rem' }}>{t.Symptom}</h3>
-                                            <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>📦 {t.Product}</p>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                                <div>📍 {t.Branch?.BranchName || t.BranchID}</div>
-                                                <div>📅 {new Date(t.CreatedAt).toLocaleDateString('th-TH')}</div>
-                                                <div style={{ color: 'var(--accent-primary)' }}>🕒 ขอเข้า: {t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : '-'}</div>
-                                                <div style={{ color: 'var(--accent-success)' }}>🛠️ เข้าจริง: {t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : '-'}</div>
-                                            </div>
-                                        </div>
+                                            </td>
+                                            <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
+                                            <td style={{ padding: '1.1rem' }}>{t.Symptom}</td>
+                                            <td style={{ padding: '1.1rem', color: 'var(--accent-secondary)', fontWeight: '600' }}>{t.Product}</td>
+                                            <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
+                                            <td style={{ padding: '1.1rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
+                                            <td style={{ padding: '1.1rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                                                {t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : '-'}
+                                            </td>
+                                            <td style={{ padding: '1.1rem', color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                                {t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : '-'}
+                                            </td>
+                                            <td style={{ padding: '1.1rem' }}>
+                                                <button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการงาน</button>
+                                            </td>
+                                        </tr>
                                     ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </main>
+                                </tbody>
+                            </table>
 
-                {selectedTicket && (
+                            <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {tickets.map(t => (
+                                    <div key={t.TicketID} className="glass-panel" onClick={() => setSelectedTicket(t)} style={{ padding: '1.2rem', position: 'relative' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
+                                            <span className="badge" style={{
+                                                background: getSLAColor(t) || `${statusColor(t.CurrentStatus)}15`,
+                                                color: getSLAColor(t) ? '#fff' : statusColor(t.CurrentStatus),
+                                            }}>{translateStatus(t.CurrentStatus)}</span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>#{t.TicketID.substring(0, 8).toUpperCase()}</span>
+                                        </div>
+                                        <h3 style={{ fontSize: '1.15rem', marginBottom: '0.3rem' }}>{t.Symptom}</h3>
+                                        <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>📦 {t.Product}</p>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                            <div>📍 {t.Branch?.BranchName || t.BranchID}</div>
+                                            <div>📅 {new Date(t.CreatedAt).toLocaleDateString('th-TH')}</div>
+                                            <div style={{ color: 'var(--accent-primary)' }}>🕒 ขอเข้า: {t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : '-'}</div>
+                                            <div style={{ color: 'var(--accent-success)' }}>🛠️ เข้าจริง: {t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : '-'}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </main>
+
+            {selectedTicket && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1rem'
+                }} onClick={() => setSelectedTicket(null)}>
                     <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(15, 23, 42, 0.7)',
-                        backdropFilter: 'blur(12px)',
-                        zIndex: 99999,
+                        width: '100%',
+                        maxWidth: '850px',
+                        maxHeight: '95vh',
+                        background: '#fff',
+                        borderRadius: '30px',
+                        padding: '0',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem'
-                    }} onClick={() => setSelectedTicket(null)}>
-                        <div style={{
-                            width: '100%',
-                            maxWidth: '850px',
-                            maxHeight: '95vh',
-                            background: '#fff',
-                            borderRadius: '30px',
-                            padding: '0',
-                            display: 'flex',
-                            flexDirection: 'row',
-                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-                            overflow: 'hidden',
-                            position: 'relative'
-                        }} className="modal-container-responsive" onClick={e => e.stopPropagation()}>
+                        flexDirection: 'row',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                        overflow: 'hidden',
+                        position: 'relative'
+                    }} className="modal-container-responsive" onClick={e => e.stopPropagation()}>
 
-                            <div style={{ flex: 1.2, padding: '2rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-                                    <div>
-                                        <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
-                                        <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Symptom}</h2>
-                                        <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-                                            📦 อุปกรณ์: {selectedTicket.Product}
+                        <div style={{ flex: 1.2, padding: '2rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</span>
+                                    <h2 style={{ fontSize: '1.6rem', margin: '0.3rem 0' }}>{selectedTicket.Symptom}</h2>
+                                    <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                                        📦 อุปกรณ์: {selectedTicket.Product}
+                                    </p>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                                        <p style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                                            📅 วันที่สาขาแจ้ง: {selectedTicket.RequestDate ? new Date(selectedTicket.RequestDate).toLocaleDateString('th-TH') : 'ไม่ได้ระบุ'}
                                         </p>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สาขา: {selectedTicket.Branch?.BranchName}</p>
-                                        <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-                                            <p style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>
-                                                📅 วันที่สาขาแจ้ง: {selectedTicket.RequestDate ? new Date(selectedTicket.RequestDate).toLocaleDateString('th-TH') : 'ไม่ได้ระบุ'}
-                                            </p>
-                                            <p style={{ color: 'var(--accent-success)', fontWeight: 'bold' }}>
-                                                🛠️ วันที่ช่างเข้าจริง: {selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toLocaleDateString('th-TH') : 'ยังไม่ระบุ'}
-                                            </p>
-                                        </div>
+                                        <p style={{ color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                            🛠️ วันที่ช่างเข้าจริง: {selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toLocaleDateString('th-TH') : 'ยังไม่ระบุ'}
+                                        </p>
                                     </div>
-                                    <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                                 </div>
-
-                                {selectedTicket.ImageURL && (
-                                    <div style={{ marginBottom: '1.5rem' }}>
-                                        <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รูปภาพประกอบ:</label>
-                                        <img
-                                            src={selectedTicket.ImageURL}
-                                            alt="Evidence"
-                                            style={{ width: '100%', borderRadius: '15px', marginTop: '0.5rem', maxHeight: '300px', objectFit: 'cover', cursor: 'pointer' }}
-                                            onClick={() => window.open(selectedTicket.ImageURL, '_blank')}
-                                        />
-                                    </div>
-                                )}
-
-                                <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1.2rem', borderRadius: '15px', marginBottom: '1.5rem' }}>
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รายละเอียดปัญหา:</label>
-                                    <p style={{ marginTop: '0.4rem', fontSize: '0.95rem' }}>{selectedTicket.Description || '-'}</p>
-                                </div>
-
-                                <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>ประวัติการอัปเดต</label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                    {selectedTicket.History?.map((h: any, i: number) => (
-                                        <div key={h.HistoryID} style={{ display: 'flex', gap: '1rem' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: i === 0 ? 'var(--accent-primary)' : '#e2e8f0' }}></div>
-                                                {i < selectedTicket.History.length - 1 && <div style={{ width: '2px', flex: 1, background: '#f1f5f9', margin: '0.3rem 0' }}></div>}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(h.Timestamp).toLocaleString('th-TH')}</div>
-                                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{translateStatus(h.Status)}</div>
-                                                {h.Note && <div style={{ background: 'rgba(0,0,0,0.02)', padding: '0.6rem', borderRadius: '8px', fontSize: '0.85rem', marginTop: '0.2rem' }}>{h.Note}</div>}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                             </div>
 
-                            <div style={{ flex: 0.8, background: '#f8fafc', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-                                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>ดำเนินการ</h3>
+                            {selectedTicket.ImageURL && (
                                 <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ส่งข้อความถึงสาขา:</label>
-                                    <textarea className="input-glass" style={{ background: '#fff', height: '100px', fontSize: '0.9rem' }} placeholder="ระบุความบันทึก..." value={techNote} onChange={e => setTechNote(e.target.value)} />
-                                </div>
-
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ช่างที่รับผิดชอบ:</label>
-                                    <select className="input-glass" style={{ background: '#fff' }} value={selectedTech} onChange={e => setSelectedTech(e.target.value)}>
-                                        <option value="">-- ยังไม่ได้ระบุช่าง --</option>
-                                        {technicians.map(t => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ระบุวันที่ช่างเข้าจริง:</label>
-                                    <input
-                                        type="date"
-                                        className="input-glass"
-                                        style={{ background: '#fff' }}
-                                        value={actualDate}
-                                        onChange={e => setActualDate(e.target.value)}
+                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รูปภาพประกอบ:</label>
+                                    <img
+                                        src={selectedTicket.ImageURL}
+                                        alt="Evidence"
+                                        style={{ width: '100%', borderRadius: '15px', marginTop: '0.5rem', maxHeight: '300px', objectFit: 'cover', cursor: 'pointer' }}
+                                        onClick={() => window.open(selectedTicket.ImageURL, '_blank')}
                                     />
                                 </div>
+                            )}
 
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem' }}>
-                                        {statuses.filter(s => s !== 'Closed').map(status => (
-                                            <button
-                                                key={status}
-                                                onClick={() => setPendingStatus(status)}
-                                                style={{
-                                                    padding: '0.8rem',
-                                                    border: '1.5px solid var(--accent-primary)',
-                                                    borderRadius: '10px',
-                                                    background: pendingStatus === status ? 'var(--accent-primary)' : 'transparent',
-                                                    color: pendingStatus === status ? '#fff' : 'var(--accent-primary)',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                {translateStatus(status)}
-                                            </button>
-                                        ))}
+                            <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1.2rem', borderRadius: '15px', marginBottom: '1.5rem' }}>
+                                <label style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--text-muted)' }}>รายละเอียดปัญหา:</label>
+                                <p style={{ marginTop: '0.4rem', fontSize: '0.95rem' }}>{selectedTicket.Description || '-'}</p>
+                            </div>
+
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>ประวัติการอัปเดต</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                {selectedTicket.History?.map((h: any, i: number) => (
+                                    <div key={h.HistoryID} style={{ display: 'flex', gap: '1rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: i === 0 ? 'var(--accent-primary)' : '#e2e8f0' }}></div>
+                                            {i < selectedTicket.History.length - 1 && <div style={{ width: '2px', flex: 1, background: '#f1f5f9', margin: '0.3rem 0' }}></div>}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(h.Timestamp).toLocaleString('th-TH')}</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{translateStatus(h.Status)}</div>
+                                            {h.Note && <div style={{ background: 'rgba(0,0,0,0.02)', padding: '0.6rem', borderRadius: '8px', fontSize: '0.85rem', marginTop: '0.2rem' }}>{h.Note}</div>}
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
+                            </div>
+                        </div>
 
-                                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                    <button
-                                        onClick={handleSaveUpdate}
-                                        disabled={isUpdating}
-                                        className="btn-primary"
-                                        style={{
-                                            width: '100%',
-                                            padding: '1rem',
-                                            fontSize: '1.1rem',
-                                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '0.5rem',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            color: '#fff',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {isUpdating ? 'กำลังบันทึก...' : '💾 บันทึกการเปลี่ยนแปลง'}
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedTicket(null)}
-                                        className="btn-secondary"
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.8rem',
-                                            background: '#f1f5f9',
-                                            border: 'none',
-                                            borderRadius: '10px',
-                                            color: '#64748b',
-                                            fontWeight: '600',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        ยกเลิก
-                                    </button>
+                        <div style={{ flex: 0.8, background: '#f8fafc', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>ดำเนินการ</h3>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ส่งข้อความถึงสาขา:</label>
+                                <textarea className="input-glass" style={{ background: '#fff', height: '100px', fontSize: '0.9rem' }} placeholder="ระบุความบันทึก..." value={techNote} onChange={e => setTechNote(e.target.value)} />
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ช่างที่รับผิดชอบ:</label>
+                                <select className="input-glass" style={{ background: '#fff' }} value={selectedTech} onChange={e => setSelectedTech(e.target.value)}>
+                                    <option value="">-- ยังไม่ได้ระบุช่าง --</option>
+                                    {technicians.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem' }}>ระบุวันที่ช่างเข้าจริง:</label>
+                                <input
+                                    type="date"
+                                    className="input-glass"
+                                    style={{ background: '#fff' }}
+                                    value={actualDate}
+                                    onChange={e => setActualDate(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem' }}>
+                                    {statuses.filter(s => s !== 'Closed').map(status => (
+                                        <button
+                                            key={status}
+                                            onClick={() => setPendingStatus(status)}
+                                            style={{
+                                                padding: '0.8rem',
+                                                border: '1.5px solid var(--accent-primary)',
+                                                borderRadius: '10px',
+                                                background: pendingStatus === status ? 'var(--accent-primary)' : 'transparent',
+                                                color: pendingStatus === status ? '#fff' : 'var(--accent-primary)',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {translateStatus(status)}
+                                        </button>
+                                    ))}
                                 </div>
+                            </div>
+
+                            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                <button
+                                    onClick={handleSaveUpdate}
+                                    disabled={isUpdating}
+                                    className="btn-primary"
+                                    style={{
+                                        width: '100%',
+                                        padding: '1rem',
+                                        fontSize: '1.1rem',
+                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {isUpdating ? 'กำลังบันทึก...' : '💾 บันทึกการเปลี่ยนแปลง'}
+                                </button>
+                                <button
+                                    onClick={() => setSelectedTicket(null)}
+                                    className="btn-secondary"
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.8rem',
+                                        background: '#f1f5f9',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        color: '#64748b',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ยกเลิก
+                                </button>
                             </div>
                         </div>
                     </div>
-                )}
-            </div>
-        );
-    }
+                </div>
+            )}
+        </div>
+    );
+}
