@@ -223,20 +223,43 @@ export default function AdminDashboard() {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
                                 {/* Technician Workload */}
                                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛠️ งานในมือช่าง (Technician Workload)</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛠️ งานในมือช่าง (Active Cases)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                         {technicians.map(tech => {
                                             const techTickets = tickets.filter(t => t.Technician === tech && t.CurrentStatus !== 'Closed');
-                                            const percentage = (techTickets.length / Math.max(tickets.length, 1)) * 100;
                                             return (
-                                                <div key={tech}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.9rem' }}>
-                                                        <span style={{ fontWeight: 'bold' }}>{tech}</span>
-                                                        <span style={{ color: 'var(--text-muted)' }}>{techTickets.length} งาน</span>
+                                                <div key={tech} style={{ background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '15px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                                                        <span style={{ fontWeight: '800', fontSize: '1.1rem', color: 'var(--accent-primary)' }}>{tech}</span>
+                                                        <span className="badge" style={{ background: 'var(--accent-primary)', color: '#fff' }}>{techTickets.length} งาน</span>
                                                     </div>
-                                                    <div style={{ height: '8px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${Math.min(percentage * 5, 100)}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-primary), #8b5cf6)', borderRadius: '4px' }}></div>
-                                                    </div>
+
+                                                    {techTickets.length > 0 ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            {techTickets.map(t => (
+                                                                <div
+                                                                    key={t.TicketID}
+                                                                    onClick={() => setSelectedTicket(t)}
+                                                                    style={{
+                                                                        background: '#fff',
+                                                                        padding: '0.6rem 0.8rem',
+                                                                        borderRadius: '10px',
+                                                                        fontSize: '0.85rem',
+                                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        justifyContent: 'space-between',
+                                                                        borderLeft: `3px solid ${statusColor(t.CurrentStatus)}`
+                                                                    }}
+                                                                >
+                                                                    <div style={{ fontWeight: '600' }}>#{t.TicketID.substring(0, 5)} - {t.Symptom}</div>
+                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{translateStatus(t.CurrentStatus)}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>ไม่มีงานค้าง</p>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -302,7 +325,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {viewMode === 'kanban' ? (
+                    {viewMode === 'kanban' && (
                         <DragDropContext onDragEnd={onDragEnd}>
                             <div className="responsive-table-container" style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
                                 {columns.map(col => (
@@ -346,7 +369,9 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
                         </DragDropContext>
-                    ) : (
+                    )}
+
+                    {viewMode === 'list' && (
                         <div className="responsive-table-container">
                             {/* Desktop Table View */}
                             <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse' }} className="desktop-only">
