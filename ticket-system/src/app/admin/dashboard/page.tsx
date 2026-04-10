@@ -51,7 +51,7 @@ const getSLAColor = (ticket: any) => {
 export default function AdminDashboard() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+    const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'overview'>('overview');
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
     const [selectedTech, setSelectedTech] = useState('');
@@ -195,11 +195,112 @@ export default function AdminDashboard() {
                                 <span>📥 Export CSV</span>
                             </button>
                             <div className="glass-panel" style={{ padding: '0.4rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
+                                <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>สรุป</button>
                                 <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
                                 <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
                             </div>
                         </div>
                     </div>
+
+                    {viewMode === 'overview' && (
+                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {/* Dashboard Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                {[
+                                    { label: 'เคสทั้งหมด', count: tickets.length, color: 'var(--accent-primary)' },
+                                    { label: 'แจ้งใหม่วันนี้', count: tickets.filter(t => new Date(t.CreatedAt).toDateString() === new Date().toDateString()).length, color: '#3b82f6' },
+                                    { label: 'กำลังซ่อม', count: tickets.filter(t => t.CurrentStatus === 'Repairing' || t.CurrentStatus === 'On Process').length, color: '#f59e0b' },
+                                    { label: 'รออะไหล่', count: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444' },
+                                    { label: 'ซ่อมเสร็จแล้ว', count: tickets.filter(t => t.CurrentStatus === 'Completed' || t.CurrentStatus === 'Closed').length, color: '#10b981' }
+                                ].map((card, i) => (
+                                    <div key={i} className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', borderTop: `5px solid ${card.color}` }}>
+                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 'bold' }}>{card.label}</p>
+                                        <h2 style={{ fontSize: '2.5rem', margin: '0.5rem 0', color: card.color }}>{card.count}</h2>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                                {/* Technician Workload */}
+                                <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛠️ งานในมือช่าง (Technician Workload)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {technicians.map(tech => {
+                                            const techTickets = tickets.filter(t => t.Technician === tech && t.CurrentStatus !== 'Closed');
+                                            const percentage = (techTickets.length / Math.max(tickets.length, 1)) * 100;
+                                            return (
+                                                <div key={tech}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.9rem' }}>
+                                                        <span style={{ fontWeight: 'bold' }}>{tech}</span>
+                                                        <span style={{ color: 'var(--text-muted)' }}>{techTickets.length} งาน</span>
+                                                    </div>
+                                                    <div style={{ height: '8px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${Math.min(percentage * 5, 100)}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-primary), #8b5cf6)', borderRadius: '4px' }}></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Top Symptoms / Categories */}
+                                <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>📊 หมวดหมู่ปัญหาที่พบมากที่สุด</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                        {Object.entries(tickets.reduce((acc: any, t) => {
+                                            acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
+                                            return acc;
+                                        }, {})).sort((a: any, b: any) => b[1] - a[1]).slice(0, 5).map(([symptom, count]: any, i) => (
+                                            <div key={symptom} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: `rgba(30,58,138,${0.8 - (i * 0.15)})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{i + 1}</div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontWeight: '600' }}>{symptom}</div>
+                                                    <div style={{ height: '4px', background: 'rgba(0,0,0,0.05)', borderRadius: '2px', marginTop: '0.2rem' }}>
+                                                        <div style={{ width: `${(count / tickets.length) * 100}%`, height: '100%', background: 'var(--accent-secondary)', borderRadius: '2px' }}></div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontWeight: 'bold', color: 'var(--accent-primary)' }}>{count}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Branch Performance / Issues */}
+                            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                                <h3 style={{ marginBottom: '1rem' }}>📍 สาขาที่มีการแจ้งซ่อมสูงสุด (Top 5 Branches)</h3>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ color: 'var(--text-muted)', fontSize: '0.8rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                <th style={{ padding: '0.8rem 0' }}>สาขา</th>
+                                                <th style={{ padding: '0.8rem 0' }}>งานทั้งหมด</th>
+                                                <th style={{ padding: '0.8rem 0' }}>รอดำเนินการ</th>
+                                                <th style={{ padding: '0.8rem 0' }}>เสร็จสิ้น</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(tickets.reduce((acc: any, t) => {
+                                                const bName = t.Branch?.BranchName || t.BranchID;
+                                                if (!acc[bName]) acc[bName] = { total: 0, pending: 0, completed: 0 };
+                                                acc[bName].total++;
+                                                if (['Open', 'On Process', 'Repairing', 'Waiting Parts'].includes(t.CurrentStatus)) acc[bName].pending++;
+                                                if (['Completed', 'Closed'].includes(t.CurrentStatus)) acc[bName].completed++;
+                                                return acc;
+                                            }, {})).sort((a: any, b: any) => b[1].total - a[1].total).slice(0, 5).map(([name, stats]: any) => (
+                                                <tr key={name} style={{ borderBottom: '1px solid #f8fafc' }}>
+                                                    <td style={{ padding: '1rem 0', fontWeight: 'bold' }}>{name}</td>
+                                                    <td style={{ padding: '1rem 0' }}>{stats.total}</td>
+                                                    <td style={{ padding: '1rem 0', color: '#ef4444', fontWeight: 'bold' }}>{stats.pending}</td>
+                                                    <td style={{ padding: '1rem 0', color: '#10b981', fontWeight: 'bold' }}>{stats.completed}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {viewMode === 'kanban' ? (
                         <DragDropContext onDragEnd={onDragEnd}>
