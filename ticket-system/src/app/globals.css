@@ -9,9 +9,7 @@
   --border-glow: rgba(185, 28, 28, 0.2);
 
   --accent-primary: #1e3a8a;
-  /* Deep Navy Blue (from logo V) */
   --accent-secondary: #b91c1c;
-  /* Bold Red (from logo L and dot) */
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #dc2626;
@@ -43,25 +41,11 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
-  /* Ambient gradient background */
   background-image:
     radial-gradient(circle at 15% 50%, rgba(250, 204, 21, 0.08), transparent 25%),
     radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08), transparent 25%);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
-/* Glassmorphism Generic Card */
 .glass-panel {
   background: var(--bg-glass);
   backdrop-filter: blur(12px);
@@ -78,7 +62,6 @@ h6 {
   box-shadow: var(--shadow-glow);
 }
 
-/* Primary Button */
 .btn-primary {
   background: linear-gradient(135deg, var(--accent-primary), #172554);
   color: #fff;
@@ -87,112 +70,64 @@ h6 {
   border-radius: var(--border-radius-sm);
   font-family: 'Inter', sans-serif;
   font-weight: 500;
-  font-size: 0.95rem;
   cursor: pointer;
   transition: var(--transition-smooth);
-  box-shadow: 0 4px 14px rgba(30, 58, 138, 0.2);
 }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 58, 138, 0.3);
-  filter: brightness(1.2);
-}
-
-/* Input Fields */
 .input-glass {
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: var(--border-radius-sm);
   color: var(--text-primary);
   padding: 0.75rem 1rem;
-  font-family: 'Inter', sans-serif;
   width: 100%;
   transition: var(--transition-smooth);
   outline: none;
 }
 
-.input-glass:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
-}
-
-/* Layout Utilites */
 .container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
 }
 
-.flex {
-  display: flex;
+/* Base Visibility Helpers */
+.desktop-only {
+  display: block;
 }
 
-.flex-col {
-  flex-direction: column;
+.mobile-only {
+  display: none;
 }
 
-.items-center {
-  align-items: center;
+/* Desktop Specific Utilities */
+@media (min-width: 769px) {
+  .desktop-only {
+    display: table !important;
+    /* For Admin Tables */
+  }
 }
 
-.justify-between {
-  justify-content: space-between;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.gap-6 {
-  gap: 1.5rem;
-}
-
+/* Mobile Specific Utilities */
 @media (max-width: 768px) {
-  .flex-mobile-col {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
     flex-direction: column;
-    align-items: flex-start !important;
-    gap: 1rem;
   }
 
   .container {
     padding: 1rem;
   }
 
-  .navbar {
-    padding: 0.8rem 1rem;
-    flex-direction: row;
-    /* Keep row for logo/menu */
-    gap: 0.5rem;
-    overflow-x: auto;
-    /* Allow scroll if needed */
-  }
-
-  .navbar .container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .nav-brand {
-    font-size: 1.1rem;
-    white-space: nowrap;
-  }
-
-  /* Table responsiveness improvement */
   .responsive-table-container {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     width: 100%;
-    margin-top: 1rem;
-    border-radius: var(--border-radius-md);
   }
 
-  /* Make table text smaller on mobile */
   table {
     font-size: 0.85rem;
   }
@@ -202,30 +137,7 @@ h6 {
     padding: 0.8rem 0.5rem !important;
   }
 
-  .badge {
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-  }
-
-  h1 {
-    font-size: 1.8rem !important;
-  }
-
-  .desktop-only {
-    display: none !important;
-  }
-
-  .mobile-only {
-    display: flex !important;
-  }
-}
-
-.mobile-only {
-  display: none;
-}
-
-/* Modal Responsive Fix */
-@media (max-width: 768px) {
+  /* Modal Responsive Fix */
   .modal-container-responsive {
     flex-direction: column !important;
     max-height: 98vh !important;
@@ -244,69 +156,36 @@ h6 {
     border-bottom: 2px dashed #f1f5f9;
   }
 
-  .modal-container-responsive h2 {
-    font-size: 1.3rem !important;
-  }
-
   .modal-close-btn {
     margin-top: 1.5rem !important;
     width: 100% !important;
   }
 }
 
-@media (max-width: 480px) {
-  .nav-brand {
-    font-size: 1rem;
-  }
-}
-
-.mt-6 {
-  margin-top: 1.5rem;
-}
-
-/* Status Badges */
-.badge {
-  display: inline-flex;
+/* Global Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  padding: 1rem 2rem;
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-glass);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-.badge-planed {
-  background: rgba(30, 58, 138, 0.1);
-  color: var(--accent-primary);
-  border: 1px solid rgba(30, 58, 138, 0.2);
+.nav-brand {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.badge-open {
-  background: rgba(217, 119, 6, 0.1);
-  color: #d97706;
-  border: 1px solid rgba(217, 119, 6, 0.2);
-}
-
-.badge-onprocess {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--accent-warning);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.badge-closed {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-success);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.badge-rejected {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--accent-danger);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-/* Fade-in Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -323,27 +202,12 @@ h6 {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* Navbar */
-.navbar {
-  display: flex;
-  justify-content: space-between;
+.badge {
+  display: inline-flex;
   align-items: center;
-  padding: 1rem 2rem;
-  background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-glass);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.nav-brand {
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
 }

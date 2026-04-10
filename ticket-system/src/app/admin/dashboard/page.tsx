@@ -55,7 +55,9 @@ export default function AdminDashboard() {
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
     const [selectedTech, setSelectedTech] = useState('');
-    const [adminActualDate, setAdminActualDate] = useState('');
+    const [actualDate, setActualDate] = useState('');
+    const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
 
     const fetchTickets = async () => {
         try {
@@ -78,10 +80,37 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (selectedTicket) {
+            setTechNote(selectedTicket.TechnicianNote || '');
             setSelectedTech(selectedTicket.Technician || '');
-            setAdminActualDate(selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toISOString().split('T')[0] : '');
+            setActualDate(selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toISOString().split('T')[0] : '');
+            setPendingStatus(selectedTicket.CurrentStatus);
         }
     }, [selectedTicket]);
+
+    const handleSaveUpdate = async () => {
+        if (!selectedTicket || !pendingStatus) return;
+
+        setIsUpdating(true);
+        try {
+            await updateTicketStatus(
+                selectedTicket.TicketID,
+                pendingStatus,
+                techNote,
+                selectedTech,
+                actualDate
+            );
+
+            await fetchTickets();
+            setSelectedTicket(null);
+            setPendingStatus(null);
+            alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+        } catch (error) {
+            console.error(error);
+            alert('เกิดข้อผิดพลาดในการบันทึก');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     const handleLogout = async () => {
         await logout();
@@ -112,17 +141,6 @@ export default function AdminDashboard() {
             alert("ไม่สามารถอัปเดตสถานะได้");
         } else {
             fetchTickets();
-        }
-    };
-
-    const handleUpdateStatus = async (id: string, newStatus: string) => {
-        const result = await updateTicketStatus(id, newStatus, techNote, selectedTech, adminActualDate);
-        if (result.success) {
-            setTechNote('');
-            setAdminActualDate('');
-            await fetchTickets();
-        } else {
-            alert("เกิดข้อผิดพลาดในการอัปเดต");
         }
     };
 
@@ -204,7 +222,6 @@ export default function AdminDashboard() {
 
                     {viewMode === 'overview' && (
                         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            {/* Dashboard Cards */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
                                 {[
                                     { label: 'เคสทั้งหมด', count: tickets.length, color: 'var(--accent-primary)' },
@@ -221,7 +238,6 @@ export default function AdminDashboard() {
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-                                {/* Technician Workload */}
                                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
                                     <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛠️ งานในมือช่าง (Active Cases)</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -266,7 +282,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Top Symptoms / Categories */}
                                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
                                     <h3 style={{ marginBottom: '1.5rem' }}>📊 หมวดหมู่ปัญหาที่พบมากที่สุด</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -289,7 +304,6 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            {/* Branch Performance / Issues */}
                             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                                 <h3 style={{ marginBottom: '1rem' }}>📍 สาขาที่มีการแจ้งซ่อมสูงสุด (Top 5 Branches)</h3>
                                 <div style={{ overflowX: 'auto' }}>
@@ -373,7 +387,6 @@ export default function AdminDashboard() {
 
                     {viewMode === 'list' && (
                         <div className="responsive-table-container">
-                            {/* Desktop Table View */}
                             <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse' }} className="desktop-only">
                                 <thead>
                                     <tr style={{ background: 'rgba(30,58,138,0.05)' }}>
@@ -417,7 +430,6 @@ export default function AdminDashboard() {
                                 </tbody>
                             </table>
 
-                            {/* Mobile Card View */}
                             <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {tickets.map(t => (
                                     <div key={t.TicketID} className="glass-panel" onClick={() => setSelectedTicket(t)} style={{ padding: '1.2rem', position: 'relative' }}>
@@ -444,7 +456,6 @@ export default function AdminDashboard() {
                 </div>
             </main>
 
-            {/* Modal Pop Up ตรงกลางหน้าจอ (Admin) - ย้ายมานอก main stack */}
             {selectedTicket && (
                 <div style={{
                     position: 'fixed',
@@ -468,13 +479,12 @@ export default function AdminDashboard() {
                         borderRadius: '30px',
                         padding: '0',
                         display: 'flex',
-                        flexDirection: 'row', // Default to row
+                        flexDirection: 'row',
                         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
                         overflow: 'hidden',
                         position: 'relative'
                     }} className="modal-container-responsive" onClick={e => e.stopPropagation()}>
 
-                        {/* Detail Left */}
                         <div style={{ flex: 1.2, padding: '2rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                                 <div>
@@ -531,7 +541,6 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
-                        {/* Control Right */}
                         <div style={{ flex: 0.8, background: '#f8fafc', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
                             <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>ดำเนินการ</h3>
                             <div style={{ marginBottom: '1.5rem' }}>
@@ -555,34 +564,75 @@ export default function AdminDashboard() {
                                     type="date"
                                     className="input-glass"
                                     style={{ background: '#fff' }}
-                                    value={adminActualDate}
-                                    onChange={e => setAdminActualDate(e.target.value)}
+                                    value={actualDate}
+                                    onChange={e => setActualDate(e.target.value)}
                                 />
                             </div>
 
-                            <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                                {statuses.filter(s => s !== 'Closed').map(s => (
-                                    <button
-                                        key={s}
-                                        onClick={() => handleUpdateStatus(selectedTicket.TicketID, s)}
-                                        style={{
-                                            padding: '0.7rem',
-                                            borderRadius: '10px',
-                                            border: '1px solid var(--accent-primary)',
-                                            background: selectedTicket.CurrentStatus === s ? 'var(--accent-primary)' : '#fff',
-                                            color: selectedTicket.CurrentStatus === s ? '#fff' : 'var(--accent-primary)',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.75rem',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {translateStatus(s)}
-                                    </button>
-                                ))}
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 'bold', fontSize: '0.8rem' }}>เปลี่ยนสถานะ:</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem' }}>
+                                    {statuses.filter(s => s !== 'Closed').map(status => (
+                                        <button
+                                            key={status}
+                                            onClick={() => setPendingStatus(status)}
+                                            style={{
+                                                padding: '0.8rem',
+                                                border: '1.5px solid var(--accent-primary)',
+                                                borderRadius: '10px',
+                                                background: pendingStatus === status ? 'var(--accent-primary)' : 'transparent',
+                                                color: pendingStatus === status ? '#fff' : 'var(--accent-primary)',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {translateStatus(status)}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            <button onClick={() => setSelectedTicket(null)} style={{ marginTop: 'auto', padding: '1rem', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} className="modal-close-btn">ปิดหน้านี้</button>
+                            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                <button
+                                    onClick={handleSaveUpdate}
+                                    disabled={isUpdating}
+                                    className="btn-primary"
+                                    style={{
+                                        width: '100%',
+                                        padding: '1rem',
+                                        fontSize: '1.1rem',
+                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {isUpdating ? 'กำลังบันทึก...' : '💾 บันทึกการเปลี่ยนแปลง'}
+                                </button>
+                                <button
+                                    onClick={() => setSelectedTicket(null)}
+                                    className="btn-secondary"
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.8rem',
+                                        background: '#f1f5f9',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        color: '#64748b',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ยกเลิก
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
