@@ -192,148 +192,89 @@ export default function AdminDashboard() {
                         <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.9rem' }}>Logout</button>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
+                    <div className="flex-mobile-col" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', gap: '1rem' }}>
                         <div>
-                            <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem' }}>จัดการงานซ่อมบำรุง (Admin)</h1>
-                            <p style={{ color: 'var(--text-muted)' }}>รวมรายการแจ้งซ่อมจากทุกสาขา</p>
+                            <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'var(--accent-primary)' }}>Dashboard</h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>สรุปภาพรวมและจัดการระบบแจ้งซ่อม</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <button onClick={handleExport} className="btn-secondary" style={{
-                                padding: '0.6rem 1.2rem',
+                                padding: '0.6rem 1rem',
                                 border: '1px solid var(--accent-primary)',
                                 color: 'var(--accent-primary)',
-                                background: 'transparent',
+                                background: '#fff',
                                 borderRadius: '12px',
                                 cursor: 'pointer',
                                 fontWeight: '600',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.4rem'
+                                fontSize: '0.85rem'
                             }}>
-                                <span>📥 Export CSV</span>
+                                📥 Export
                             </button>
-                            <div className="glass-panel" style={{ padding: '0.4rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                                <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>สรุป</button>
-                                <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
-                                <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+                            <div style={{ padding: '0.3rem', background: '#e2e8f0', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
+                                <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>สรุป</button>
+                                <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>บอร์ด</button>
+                                <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1.2rem', border: 'none', borderRadius: '10px', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.85rem' }}>ตาราง</button>
                             </div>
                         </div>
                     </div>
 
                     {viewMode === 'overview' && (
                         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                            {/* Summary Cards with Icons */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.2rem' }}>
                                 {[
-                                    { label: 'เคสทั้งหมด', count: tickets.length, color: 'var(--accent-primary)' },
-                                    { label: 'แจ้งใหม่วันนี้', count: tickets.filter(t => new Date(t.CreatedAt).toDateString() === new Date().toDateString()).length, color: '#3b82f6' },
-                                    { label: 'กำลังซ่อม', count: tickets.filter(t => t.CurrentStatus === 'Repairing' || t.CurrentStatus === 'On Process').length, color: '#f59e0b' },
-                                    { label: 'รออะไหล่', count: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444' },
-                                    { label: 'ซ่อมเสร็จแล้ว', count: tickets.filter(t => t.CurrentStatus === 'Completed' || t.CurrentStatus === 'Closed').length, color: '#10b981' }
+                                    { label: 'งานรวม', count: tickets.length, color: 'var(--accent-primary)', icon: '📋' },
+                                    { label: 'รอดำเนินการ', count: tickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
+                                    { label: 'กำลังซ่อม', count: tickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
+                                    { label: 'รออะไหล่', count: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444', icon: '📦' },
+                                    { label: 'สำเร็จ', count: tickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
                                 ].map((card, i) => (
-                                    <div key={i} className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', borderTop: `5px solid ${card.color}` }}>
-                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 'bold' }}>{card.label}</p>
-                                        <h2 style={{ fontSize: '2.5rem', margin: '0.5rem 0', color: card.color }}>{card.count}</h2>
+                                    <div key={i} className="glass-panel" style={{ padding: '1.2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', borderRadius: '20px' }}>
+                                        <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.icon}</div>
+                                        <div style={{ color: card.color, fontSize: '2rem', fontWeight: '800' }}>{card.count}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: '600' }}>{card.label}</div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-                                <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛠️ งานในมือช่าง (Active Cases)</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                                {/* Modern Workload Chart */}
+                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>� ภาระงานรายบุคคล (Workload)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                                         {technicians.map(tech => {
                                             const techTickets = tickets.filter(t => t.Technician === tech && t.CurrentStatus !== 'Closed');
+                                            const total = tickets.length || 1;
+                                            const width = (techTickets.length / total) * 100;
                                             return (
-                                                <div key={tech} style={{ background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '15px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                                                        <span style={{ fontWeight: '800', fontSize: '1.1rem', color: 'var(--accent-primary)' }}>{tech}</span>
-                                                        <span className="badge" style={{ background: 'var(--accent-primary)', color: '#fff' }}>{techTickets.length} งาน</span>
+                                                <div key={tech}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
+                                                        <span style={{ fontWeight: '700' }}>ช่าง {tech}</span>
+                                                        <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{techTickets.length} เคส</span>
                                                     </div>
-
-                                                    {techTickets.length > 0 ? (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                            {techTickets.map(t => (
-                                                                <div
-                                                                    key={t.TicketID}
-                                                                    onClick={() => setSelectedTicket(t)}
-                                                                    style={{
-                                                                        background: '#fff',
-                                                                        padding: '0.6rem 0.8rem',
-                                                                        borderRadius: '10px',
-                                                                        fontSize: '0.85rem',
-                                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                                                        cursor: 'pointer',
-                                                                        display: 'flex',
-                                                                        justifyContent: 'space-between',
-                                                                        borderLeft: `3px solid ${statusColor(t.CurrentStatus)}`
-                                                                    }}
-                                                                >
-                                                                    <div style={{ fontWeight: '600' }}>#{t.TicketID.substring(0, 5)} - {t.Symptom}</div>
-                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{translateStatus(t.CurrentStatus)}</div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>ไม่มีงานค้าง</p>
-                                                    )}
+                                                    <div style={{ height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${Math.max(width * 5, 2)}%`, height: '100%', background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)', borderRadius: '6px' }}></div>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
 
-                                <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>📊 หมวดหมู่ปัญหาที่พบมากที่สุด</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                {/* Simplified Category List */}
+                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>🔍 สรุปประเภทปัญหา</h3>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem' }}>
                                         {Object.entries(tickets.reduce((acc: any, t) => {
                                             acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
                                             return acc;
-                                        }, {})).sort((a: any, b: any) => b[1] - a[1]).slice(0, 5).map(([symptom, count]: any, i) => (
-                                            <div key={symptom} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: `rgba(30,58,138,${0.8 - (i * 0.15)})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{i + 1}</div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: '600' }}>{symptom}</div>
-                                                    <div style={{ height: '4px', background: 'rgba(0,0,0,0.05)', borderRadius: '2px', marginTop: '0.2rem' }}>
-                                                        <div style={{ width: `${(count / tickets.length) * 100}%`, height: '100%', background: 'var(--accent-secondary)', borderRadius: '2px' }}></div>
-                                                    </div>
-                                                </div>
-                                                <div style={{ fontWeight: 'bold', color: 'var(--accent-primary)' }}>{count}</div>
+                                        }, {})).sort((a: any, b: any) => b[1] - a[1]).map(([sym, count]: any) => (
+                                            <div key={sym} style={{ background: '#f1f5f9', padding: '0.6rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{sym}</span>
+                                                <span style={{ background: 'var(--accent-primary)', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '6px', fontSize: '0.75rem' }}>{count}</span>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-                            </div>
-
-                            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                                <h3 style={{ marginBottom: '1rem' }}>📍 สาขาที่มีการแจ้งซ่อมสูงสุด (Top 5 Branches)</h3>
-                                <div style={{ overflowX: 'auto' }}>
-                                    <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-                                        <thead>
-                                            <tr style={{ color: 'var(--text-muted)', fontSize: '0.8rem', borderBottom: '1px solid #f1f5f9' }}>
-                                                <th style={{ padding: '0.8rem 0' }}>สาขา</th>
-                                                <th style={{ padding: '0.8rem 0' }}>งานทั้งหมด</th>
-                                                <th style={{ padding: '0.8rem 0' }}>รอดำเนินการ</th>
-                                                <th style={{ padding: '0.8rem 0' }}>เสร็จสิ้น</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {Object.entries(tickets.reduce((acc: any, t) => {
-                                                const bName = t.Branch?.BranchName || t.BranchID;
-                                                if (!acc[bName]) acc[bName] = { total: 0, pending: 0, completed: 0 };
-                                                acc[bName].total++;
-                                                if (['Open', 'On Process', 'Repairing', 'Waiting Parts'].includes(t.CurrentStatus)) acc[bName].pending++;
-                                                if (['Completed', 'Closed'].includes(t.CurrentStatus)) acc[bName].completed++;
-                                                return acc;
-                                            }, {})).sort((a: any, b: any) => b[1].total - a[1].total).slice(0, 5).map(([name, stats]: any) => (
-                                                <tr key={name} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                                    <td style={{ padding: '1rem 0', fontWeight: 'bold' }}>{name}</td>
-                                                    <td style={{ padding: '1rem 0' }}>{stats.total}</td>
-                                                    <td style={{ padding: '1rem 0', color: '#ef4444', fontWeight: 'bold' }}>{stats.pending}</td>
-                                                    <td style={{ padding: '1rem 0', color: '#10b981', fontWeight: 'bold' }}>{stats.completed}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
                                 </div>
                             </div>
                         </div>
