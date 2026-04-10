@@ -34,13 +34,16 @@ export function NavBar() {
             top: showHeader ? '0' : '-100px',
             transition: 'top 0.3s ease-in-out',
             zIndex: 1000,
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: 'rgba(255, 255, 255, 0.98)',
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-            padding: '0.8rem 1rem'
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            padding: '0 1rem',
+            height: '70px',
+            display: 'flex',
+            alignItems: 'center'
         }}>
-            <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1440px', margin: '0 auto' }}>
-                <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '1600px', margin: '0 auto' }}>
+                <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                     <span style={{ fontSize: '1.2rem' }}>🏠</span>
                     <div style={{ lineHeight: '1.1' }}>
                         <div style={{ fontWeight: '800', fontSize: '0.9rem' }}>ระบบซ่อมบำรุง</div>

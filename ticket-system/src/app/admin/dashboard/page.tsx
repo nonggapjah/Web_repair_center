@@ -180,8 +180,8 @@ export default function AdminDashboard() {
     );
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <main className="container" style={{ padding: '6rem 1rem 2rem', maxWidth: '1600px', margin: '0 auto', flex: 1 }}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <main style={{ padding: '6rem 2rem 2rem', maxWidth: '1800px', width: '100%', margin: '0 auto', flex: 1 }}>
                 <div className="animate-fade-in">
                     <div className="flex-mobile-col" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', gap: '1rem' }}>
                         <div>
