@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { getAllTickets, updateTicketStatus } from '@/app/actions/tickets';
 import { logout } from '@/app/actions/auth';
@@ -56,6 +56,10 @@ export default function AdminDashboard() {
     const [pendingStatus, setPendingStatus] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
 
+    // Filter states
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
     const fetchTickets = async () => {
         try {
             const data = await getAllTickets();
@@ -83,6 +87,25 @@ export default function AdminDashboard() {
             setPendingStatus(selectedTicket.CurrentStatus);
         }
     }, [selectedTicket]);
+
+    // Derived filtered tickets
+    const filteredTickets = useMemo(() => {
+        return tickets.filter(t => {
+            const ticketDate = new Date(t.CreatedAt);
+            ticketDate.setHours(0, 0, 0, 0);
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                if (ticketDate < start) return false;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                if (ticketDate > end) return false;
+            }
+            return true;
+        });
+    }, [tickets, startDate, endDate]);
 
     const handleSaveUpdate = async () => {
         if (!selectedTicket || !pendingStatus) return;
@@ -123,7 +146,7 @@ export default function AdminDashboard() {
     const handleExport = () => {
         const headers = ["Ticket ID", "Status", "หมวดหมู่", "สาขา", "ช่างที่รับผิดชอบ", "รายละเอียด", "วันที่แจ้ง"];
         const csvRows = [headers.join(",")];
-        tickets.forEach(t => {
+        filteredTickets.forEach(t => {
             const row = [
                 t.TicketID.substring(0, 8).toUpperCase(),
                 translateStatus(t.CurrentStatus),
@@ -140,7 +163,7 @@ export default function AdminDashboard() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `repair_tickets_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute("download", `repair_tickets_filtered_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -150,11 +173,11 @@ export default function AdminDashboard() {
     if (isLoading) return <div style={{ textAlign: 'center', padding: '5rem' }}>กำลังโหลด...</div>;
 
     // Logic for Pie Chart
-    const symptomStats = tickets.reduce((acc: any, t) => {
+    const symptomStats = filteredTickets.reduce((acc: any, t) => {
         acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
         return acc;
     }, {});
-    const totalSymptoms = tickets.length || 1;
+    const totalSymptoms = filteredTickets.length || 1;
     const sortedSymptoms = Object.entries(symptomStats).sort((a: any, b: any) => b[1] - a[1]);
     const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899'];
 
@@ -166,24 +189,38 @@ export default function AdminDashboard() {
         currentAngle += angle;
         return { label, count, percentage, startAngle, angle, color: chartColors[i % chartColors.length] };
     });
-
     const conicGradientString = segments.map(s => `${s.color} ${s.startAngle}deg ${s.startAngle + s.angle}deg`).join(', ');
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
             <main style={{ padding: '6rem 2rem 2rem', maxWidth: '1800px', width: '100%', margin: '0 auto', flex: 1 }}>
                 <div className="animate-fade-in">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', gap: '1rem' }}>
                         <div>
                             <h1 style={{ fontSize: '2.2rem', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>Dashboard</h1>
                             <p style={{ color: 'var(--text-muted)' }}>สรุปภาพรวมและจัดการระบบแจ้งซ่อม</p>
                         </div>
-                        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                            <button onClick={handleExport} style={{ padding: '0.6rem 1rem', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', background: '#fff', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' }}>📥 Export</button>
-                            <div style={{ background: '#e2e8f0', padding: '0.3rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                                <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>สรุป</button>
-                                <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
-                                <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
+                            <div className="glass-panel" style={{ padding: '0.8rem 1.2rem', display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '15px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>ตั้งแต่วันที่:</label>
+                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem' }} />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>ถึงวันที่:</label>
+                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem' }} />
+                                </div>
+                                {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate(''); }} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '700' }}>ล้าง</button>}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                                <button onClick={handleExport} style={{ padding: '0.6rem 1rem', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', background: '#fff', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' }}>📥 Export</button>
+                                <div style={{ background: '#e2e8f0', padding: '0.3rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
+                                    <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>สรุป</button>
+                                    <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
+                                    <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -192,11 +229,11 @@ export default function AdminDashboard() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.2rem' }}>
                                 {[
-                                    { label: 'งานรวม', count: tickets.length, color: 'var(--accent-primary)', icon: '📋' },
-                                    { label: 'รอดำเนินการ', count: tickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
-                                    { label: 'กำลังซ่อม', count: tickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
-                                    { label: 'รออะไหล่', count: tickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444', icon: '📦' },
-                                    { label: 'สำเร็จ', count: tickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
+                                    { label: 'งานรวมช่วงนี้', count: filteredTickets.length, color: 'var(--accent-primary)', icon: '📋' },
+                                    { label: 'รอดำเนินการ', count: filteredTickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
+                                    { label: 'กำลังซ่อม', count: filteredTickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
+                                    { label: 'รออะไหล่', count: filteredTickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444', icon: '📦' },
+                                    { label: 'สำเร็จ', count: filteredTickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
                                 ].map((card, i) => (
                                     <div key={i} className="glass-panel" style={{ padding: '1.2rem', textAlign: 'center', borderRadius: '20px' }}>
                                         <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.icon}</div>
@@ -206,24 +243,36 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+                                {/* Workload with Details and Bar Chart */}
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
                                     <h3 style={{ marginBottom: '1.5rem' }}>📈 ภาระงานและผลงานช่าง</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                         {technicians.map(tech => {
-                                            const techAll = tickets.filter(t => t.Technician === tech);
+                                            const techAll = filteredTickets.filter(t => t.Technician === tech);
                                             const pend = techAll.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus));
                                             const proc = techAll.filter(t => ['On Process', 'Repairing'].includes(t.CurrentStatus));
                                             const wait = techAll.filter(t => t.CurrentStatus === 'Waiting Parts');
                                             const done = techAll.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus));
+
+                                            const maxTotal = Math.max(...technicians.map(te => filteredTickets.filter(t => t.Technician === te).length)) || 1;
+                                            const barWidth = (techAll.length / maxTotal) * 100;
+
                                             return (
-                                                <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '0.8rem' }}>
+                                                <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1.2rem' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', alignItems: 'center' }}>
                                                         <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>ช่าง {tech}</span>
-                                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                            <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>{techAll.length} เคส</span>
-                                                            <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700', color: '#166534' }}>เสร็จ {done.length}</span>
+                                                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                                            <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700' }}>รวม {techAll.length}</span>
+                                                            <span style={{ background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#92400e' }}>รอ {pend.length}</span>
+                                                            <span style={{ background: '#dbeafe', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#1e40af' }}>ทำ {proc.length}</span>
+                                                            <span style={{ background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#991b1b' }}>อะไหล่ {wait.length}</span>
+                                                            <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#166534' }}>เสร็จ {done.length}</span>
                                                         </div>
+                                                    </div>
+                                                    {/* Mini bar for visual */}
+                                                    <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', marginTop: '0.5rem' }}>
+                                                        <div style={{ width: `${barWidth}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: '4px' }}></div>
                                                     </div>
                                                 </div>
                                             );
@@ -231,8 +280,9 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
+                                {/* Pie Chart Section */}
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา (Pie Chart)</h3>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา (ตามช่วงเวลา)</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
                                         <div style={{
                                             width: '200px', height: '200px', borderRadius: '50%',
@@ -240,7 +290,7 @@ export default function AdminDashboard() {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
                                             boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
                                         }}>
-                                            <div style={{ width: '130px', height: '130px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: '800', color: '#64748b' }}>รวม {tickets.length}</div>
+                                            <div style={{ width: '130px', height: '130px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: '800', color: '#64748b' }}>รวม {filteredTickets.length}</div>
                                         </div>
                                         <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                                             {segments.map(s => (
@@ -256,6 +306,12 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {(viewMode === 'kanban' || viewMode === 'list') && (
+                        <div style={{ margin: '1rem 0', padding: '1rem', background: '#fff3cd', borderRadius: '12px', color: '#856404', fontSize: '0.9rem', fontWeight: '700' }}>
+                            ⚠️ แสดงข้อมูลเฉพาะวันที่ {startDate || 'เริ่มต้น'} ถึง {endDate || 'ปัจจุบัน'} (พบ {filteredTickets.length} รายการ)
+                        </div>
+                    )}
+
                     {viewMode === 'kanban' && (
                         <DragDropContext onDragEnd={onDragEnd}>
                             <div style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
@@ -263,12 +319,12 @@ export default function AdminDashboard() {
                                     <div key={status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                             <h3 style={{ fontSize: '1.1rem' }}>{translateStatus(status)}</h3>
-                                            <span style={{ background: '#e2e8f0', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.8rem' }}>{tickets.filter(t => t.CurrentStatus === status).length}</span>
+                                            <span style={{ background: '#e2e8f0', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.8rem' }}>{filteredTickets.filter(t => t.CurrentStatus === status).length}</span>
                                         </div>
                                         <Droppable droppableId={status}>
                                             {(provided) => (
                                                 <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: '#f1f5f9', borderRadius: '16px', padding: '0.8rem' }}>
-                                                    {tickets.filter(t => t.CurrentStatus === status).map((ticket, index) => (
+                                                    {filteredTickets.filter(t => t.CurrentStatus === status).map((ticket, index) => (
                                                         <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
                                                             {(provided) => (
                                                                 <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1rem', marginBottom: '0.8rem', background: '#fff', borderLeft: getSLAColor(ticket) ? `4px solid ${getSLAColor(ticket)}` : 'none', ...provided.draggableProps.style }}>
@@ -303,7 +359,7 @@ export default function AdminDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tickets.map(t => (
+                                    {filteredTickets.map(t => (
                                         <tr key={t.TicketID} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                             <td style={{ padding: '1.1rem' }}>
                                                 <span className="badge" style={{ background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}50` }}>{translateStatus(t.CurrentStatus)}</span>
