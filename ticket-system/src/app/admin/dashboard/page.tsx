@@ -149,6 +149,26 @@ export default function AdminDashboard() {
 
     if (isLoading) return <div style={{ textAlign: 'center', padding: '5rem' }}>กำลังโหลด...</div>;
 
+    // Logic for Pie Chart
+    const symptomStats = tickets.reduce((acc: any, t) => {
+        acc[t.Symptom] = (acc[t.Symptom] || 0) + 1;
+        return acc;
+    }, {});
+    const totalSymptoms = tickets.length || 1;
+    const sortedSymptoms = Object.entries(symptomStats).sort((a: any, b: any) => b[1] - a[1]);
+    const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899'];
+
+    let currentAngle = 0;
+    const segments = sortedSymptoms.map(([label, count]: any, i) => {
+        const percentage = (count / totalSymptoms) * 100;
+        const angle = (percentage / 100) * 360;
+        const startAngle = currentAngle;
+        currentAngle += angle;
+        return { label, count, percentage, startAngle, angle, color: chartColors[i % chartColors.length] };
+    });
+
+    const conicGradientString = segments.map(s => `${s.color} ${s.startAngle}deg ${s.startAngle + s.angle}deg`).join(', ');
+
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
             <main style={{ padding: '6rem 2rem 2rem', maxWidth: '1800px', width: '100%', margin: '0 auto', flex: 1 }}>
@@ -189,7 +209,7 @@ export default function AdminDashboard() {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
                                     <h3 style={{ marginBottom: '1.5rem' }}>📈 ภาระงานและผลงานช่าง</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                         {technicians.map(tech => {
                                             const techAll = tickets.filter(t => t.Technician === tech);
                                             const pend = techAll.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus));
@@ -197,15 +217,12 @@ export default function AdminDashboard() {
                                             const wait = techAll.filter(t => t.CurrentStatus === 'Waiting Parts');
                                             const done = techAll.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus));
                                             return (
-                                                <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                                                <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '0.8rem' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', alignItems: 'center' }}>
                                                         <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>ช่าง {tech}</span>
                                                         <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                            <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>รวม {techAll.length}</span>
-                                                            <span style={{ background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>รอ {pend.length}</span>
-                                                            <span style={{ background: '#dbeafe', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>ทำ {proc.length}</span>
-                                                            <span style={{ background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>อะไหล่ {wait.length}</span>
-                                                            <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>เสร็จ {done.length}</span>
+                                                            <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>{techAll.length} เคส</span>
+                                                            <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700', color: '#166534' }}>เสร็จ {done.length}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -215,23 +232,24 @@ export default function AdminDashboard() {
                                 </div>
 
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                        {(() => {
-                                            const stats = tickets.reduce((acc: any, t) => { acc[t.Symptom] = (acc[t.Symptom] || 0) + 1; return acc; }, {});
-                                            const total = tickets.length || 1;
-                                            return Object.entries(stats).sort((a: any, b: any) => b[1] - a[1]).map(([sym, count]: any, i) => (
-                                                <div key={sym}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
-                                                        <span style={{ fontWeight: '700' }}>{sym}</span>
-                                                        <span style={{ fontWeight: '800' }}>{count} เคส ({Math.round((count / total) * 100)}%)</span>
-                                                    </div>
-                                                    <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${(count / total) * 100}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: '5px' }}></div>
-                                                    </div>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา (Pie Chart)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
+                                        <div style={{
+                                            width: '200px', height: '200px', borderRadius: '50%',
+                                            background: sortedSymptoms.length > 0 ? `conic-gradient(${conicGradientString})` : '#f1f5f9',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
+                                            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                                        }}>
+                                            <div style={{ width: '130px', height: '130px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: '800', color: '#64748b' }}>รวม {tickets.length}</div>
+                                        </div>
+                                        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                                            {segments.map(s => (
+                                                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                                                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: s.color }}></div>
+                                                    <span style={{ fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label} ({Math.round(s.percentage)}%)</span>
                                                 </div>
-                                            ));
-                                        })()}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
