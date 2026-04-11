@@ -124,25 +124,6 @@ export default function AdminDashboard() {
         }
     };
 
-    const onDragEnd = async (result: DropResult) => {
-        if (!result.destination) return;
-        const { source, destination, draggableId } = result;
-        if (source.droppableId === destination.droppableId) return;
-        if (destination.droppableId === 'Closed') {
-            alert("สถานะ 'ปิดงานถาวร' ต้องให้ทางสาขาเป็นผู้กดยืนยันเท่านั้น");
-            return;
-        }
-        const oldTickets = [...tickets];
-        setTickets(prev => prev.map(t => t.TicketID === draggableId ? { ...t, CurrentStatus: destination.droppableId } : t));
-        const updateResult = await updateTicketStatus(draggableId, destination.droppableId);
-        if (!updateResult.success) {
-            setTickets(oldTickets);
-            alert("ไม่สามารถอัปเดตสถานะได้");
-        } else {
-            fetchTickets();
-        }
-    };
-
     const handleExport = () => {
         const headers = ["Ticket ID", "Status", "หมวดหมู่", "สาขา", "ช่างที่รับผิดชอบ", "รายละเอียด", "วันที่แจ้ง"];
         const csvRows = [headers.join(",")];
@@ -243,26 +224,21 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-                                {/* Workload with Details and Bar Chart */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
                                     <h3 style={{ marginBottom: '1.5rem' }}>📈 ภาระงานและผลงานช่าง</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                                         {technicians.map(tech => {
                                             const techAll = filteredTickets.filter(t => t.Technician === tech);
                                             const pend = techAll.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus));
                                             const proc = techAll.filter(t => ['On Process', 'Repairing'].includes(t.CurrentStatus));
                                             const wait = techAll.filter(t => t.CurrentStatus === 'Waiting Parts');
                                             const done = techAll.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus));
-
-                                            const maxTotal = Math.max(...technicians.map(te => filteredTickets.filter(t => t.Technician === te).length)) || 1;
-                                            const barWidth = (techAll.length / maxTotal) * 100;
-
                                             return (
-                                                <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1.2rem' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', alignItems: 'center' }}>
-                                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>ช่าง {tech}</span>
-                                                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                                <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '0.8rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', alignItems: 'center' }}>
+                                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.05rem' }}>ช่าง {tech}</span>
+                                                        <div style={{ display: 'flex', gap: '0.3rem' }}>
                                                             <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700' }}>รวม {techAll.length}</span>
                                                             <span style={{ background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#92400e' }}>รอ {pend.length}</span>
                                                             <span style={{ background: '#dbeafe', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#1e40af' }}>ทำ {proc.length}</span>
@@ -270,41 +246,61 @@ export default function AdminDashboard() {
                                                             <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#166534' }}>เสร็จ {done.length}</span>
                                                         </div>
                                                     </div>
-                                                    {/* Mini bar for visual */}
-                                                    <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', marginTop: '0.5rem' }}>
-                                                        <div style={{ width: `${barWidth}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: '4px' }}></div>
-                                                    </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
 
-                                {/* Pie Chart Section */}
                                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา (ตามช่วงเวลา)</h3>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
                                         <div style={{
                                             width: '200px', height: '200px', borderRadius: '50%',
                                             background: sortedSymptoms.length > 0 ? `conic-gradient(${conicGradientString})` : '#f1f5f9',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
-                                            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
                                         }}>
-                                            <div style={{ width: '130px', height: '130px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: '800', color: '#64748b' }}>รวม {filteredTickets.length}</div>
+                                            <div style={{ width: '130px', height: '130px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: '800', color: '#64748b' }}>{totalSymptoms} เคส</div>
                                         </div>
                                         <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                                             {segments.map(s => (
                                                 <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
                                                     <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: s.color }}></div>
-                                                    <span style={{ fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label} ({Math.round(s.percentage)}%)</span>
+                                                    <span style={{ fontWeight: '700' }}>{s.label} ({Math.round(s.percentage)}%)</span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="glass-panel" style={{ gridColumn: 'span 2', padding: '1.5rem', borderRadius: '24px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>📊 สรุปเคสที่เหลืออยู่ (ปริมาณงานแยกตามช่าง)</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        {technicians.map(tech => {
+                                            const techAll = filteredTickets.filter(t => t.Technician === tech);
+                                            const remaining = techAll.filter(t => !['Completed', 'Closed'].includes(t.CurrentStatus)).length;
+                                            const maxRemaining = Math.max(...technicians.map(te => filteredTickets.filter(t => t.Technician === te && !['Completed', 'Closed'].includes(t.CurrentStatus)).length)) || 1;
+                                            const barWidth = (remaining / maxRemaining) * 100;
+
+                                            return (
+                                                <div key={tech} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <div style={{ width: '100px', fontWeight: '800', fontSize: '0.9rem' }}>ช่าง {tech}</div>
+                                                    <div style={{ flex: 1, height: '20px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${barWidth}%`, height: '100%', background: 'linear-gradient(90deg, #7c3aed, #4f46e5)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '10px' }}>
+                                                            {remaining > 0 && <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: '800' }}>{remaining} เคส</span>}
+                                                        </div>
+                                                    </div>
+                                                    {remaining === 0 && <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '800' }}>ไม่มีงานค้าง</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
+
+                    {/* ... Rest of the component (Kanban, List, Modals) remains the same ... */}
 
                     {(viewMode === 'kanban' || viewMode === 'list') && (
                         <div style={{ margin: '1rem 0', padding: '1rem', background: '#fff3cd', borderRadius: '12px', color: '#856404', fontSize: '0.9rem', fontWeight: '700' }}>
