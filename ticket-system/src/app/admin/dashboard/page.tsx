@@ -124,6 +124,25 @@ export default function AdminDashboard() {
         }
     };
 
+    const onDragEnd = async (result: DropResult) => {
+        if (!result.destination) return;
+        const { source, destination, draggableId } = result;
+        if (source.droppableId === destination.droppableId) return;
+        if (destination.droppableId === 'Closed') {
+            alert("สถานะ 'ปิดงานถาวร' ต้องให้ทางสาขาเป็นผู้กดยืนยันเท่านั้น");
+            return;
+        }
+        const oldTickets = [...tickets];
+        setTickets(prev => prev.map(t => t.TicketID === draggableId ? { ...t, CurrentStatus: destination.droppableId } : t));
+        const updateResult = await updateTicketStatus(draggableId, destination.droppableId);
+        if (!updateResult.success) {
+            setTickets(oldTickets);
+            alert("ไม่สามารถอัปเดตสถานะได้");
+        } else {
+            fetchTickets();
+        }
+    };
+
     const handleExport = () => {
         const headers = ["Ticket ID", "Status", "หมวดหมู่", "สาขา", "ช่างที่รับผิดชอบ", "รายละเอียด", "วันที่แจ้ง"];
         const csvRows = [headers.join(",")];
@@ -297,14 +316,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* ... Rest of the component (Kanban, List, Modals) remains the same ... */}
-
-                    {(viewMode === 'kanban' || viewMode === 'list') && (
-                        <div style={{ margin: '1rem 0', padding: '1rem', background: '#fff3cd', borderRadius: '12px', color: '#856404', fontSize: '0.9rem', fontWeight: '700' }}>
-                            ⚠️ แสดงข้อมูลเฉพาะวันที่ {startDate || 'เริ่มต้น'} ถึง {endDate || 'ปัจจุบัน'} (พบ {filteredTickets.length} รายการ)
                         </div>
                     )}
 
