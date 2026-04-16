@@ -308,7 +308,7 @@ export default function AdminDashboard() {
                                 {filteredTickets.map(t => (
                                     <tr key={t.TicketID} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }} onClick={() => setSelectedTicket(t)}>
                                         <td style={{ padding: '1rem 1.2rem' }}>
-                                            <span style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}` }}>{translateStatus(t.CurrentStatus)}</span>
+                                            <span style={{ display: 'inline-block', whiteSpace: 'nowrap', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}` }}>{translateStatus(t.CurrentStatus)}</span>
                                         </td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#1e293b' }}>{t.Product || "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem' }}>{t.Symptom}</td>
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
 
                             <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                                 <span style={{ padding: '0.4rem 0.8rem', background: '#e2e8f0', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800' }}>#{selectedTicket.TicketID.substring(0, 8).toUpperCase()}</span>
-                                <span style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(selectedTicket.CurrentStatus) + '20', color: statusColor(selectedTicket.CurrentStatus) }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
+                                <span style={{ display: 'inline-block', whiteSpace: 'nowrap', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(selectedTicket.CurrentStatus) + '20', color: statusColor(selectedTicket.CurrentStatus) }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                             </div>
 
                             <div style={{ marginTop: '1rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
