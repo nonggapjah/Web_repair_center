@@ -317,20 +317,34 @@ export default function AdminDashboard() {
                                     const tks = filteredTickets.filter(t => t.Technician === tech);
                                     if (tks.length === 0 && !filterTechnician) return null;
                                     return (
-                                        <div key={tech} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.8rem 0', borderBottom: '1px solid #f1f5f9' }}>
-                                            <span style={{ fontWeight: '800' }}>ช่าง {tech}</span>
-                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>รวม {tks.length}</span>
-                                                <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', color: '#166534' }}>เสร็จ {tks.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus)).length}</span>
+                                        <div key={tech} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem 0', borderBottom: '1px solid #f1f5f9' }}>
+                                            <span style={{ fontWeight: '800', color: '#1e293b' }}>ช่าง {tech}</span>
+                                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                <span style={{ background: '#f1f5f9', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>ทั้งหมด {tks.length}</span>
+                                                <span style={{ background: '#fef3c7', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#b45309' }}>รอดำเนินการ {tks.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length}</span>
+                                                <span style={{ background: '#dbeafe', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>กำลังซ่อม {tks.filter(t => ['On Process', 'Repairing'].includes(t.CurrentStatus)).length}</span>
+                                                <span style={{ background: '#fee2e2', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#b91c1c' }}>รออะไหล่ {tks.filter(t => t.CurrentStatus === 'Waiting Parts').length}</span>
+                                                <span style={{ background: '#dcfce7', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#15803d' }}>เสร็จสิ้น {tks.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus)).length}</span>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                            <div style={{ padding: '2rem', borderRadius: '24px', background: '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <div style={{ padding: '2rem', borderRadius: '24px', background: '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <h3 style={{ marginBottom: '1.5rem', width: '100%', color: '#1e293b' }}>🧩 สัดส่วนประเภทปัญหา</h3>
-                                <div style={{ width: '220px', height: '220px', borderRadius: '50%', background: filteredTickets.length > 0 ? `conic-gradient(${conicGradient})` : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <div style={{ width: '140px', height: '140px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#64748b', fontSize: '1.2rem' }}>{filteredTickets.length}</div>
+                                <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    <div style={{ width: '200px', height: '200px', borderRadius: '50%', background: filteredTickets.length > 0 ? `conic-gradient(${conicGradient})` : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ width: '120px', height: '120px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#64748b', fontSize: '1.2rem' }}>{filteredTickets.length}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', minWidth: '150px' }}>
+                                        {sortedSymptoms.map(([symp, count]: any, i) => (
+                                            <div key={symp} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: chartColors[i % chartColors.length] }}></span>
+                                                <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '800' }}>{symp}</span>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#1e293b', marginLeft: 'auto', paddingLeft: '1rem' }}>{count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
