@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 // import { sendLineNotify } from "@/lib/lineNotify";
 
 export async function createTicket(formData: {
@@ -64,6 +64,7 @@ export async function createTicket(formData: {
 }
 
 export async function getBranchTickets(branchId: string) {
+    noStore();
     return await prisma.repairTicket.findMany({
         where: { BranchID: branchId },
         include: {
@@ -81,6 +82,7 @@ export async function getBranchTickets(branchId: string) {
 }
 
 export async function getAllTickets() {
+    noStore();
     return await prisma.repairTicket.findMany({
         include: {
             Branch: true,
@@ -192,6 +194,7 @@ export async function addTicketComment(ticketId: string, message: string, imageU
 
 // ---- Notifications Endpoints ----
 export async function getUserNotifications(branchId: string, role: string) {
+    noStore();
     if (role === 'Admin') {
         return await prisma.notification.findMany({
             where: { TargetRole: 'Admin' },

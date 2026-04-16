@@ -46,7 +46,7 @@ export function NotificationBell() {
             }
         };
         init();
-        const interval = setInterval(init, 15000); // refresh every 15s
+        const interval = setInterval(init, 5000); // refresh every 5s
         return () => clearInterval(interval);
     }, []);
 
@@ -71,7 +71,7 @@ export function NotificationBell() {
         }
         setIsOpen(false);
         if (notif.TicketID) {
-            router.push(`?ticketId=${notif.TicketID}`);
+            window.dispatchEvent(new CustomEvent('OPEN_TICKET', { detail: { ticketId: notif.TicketID } }));
         }
     };
 

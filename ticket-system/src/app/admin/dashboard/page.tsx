@@ -68,20 +68,22 @@ export default function AdminDashboard() {
         }
     };
 
-    useEffect(() => { fetchTickets(); }, []);
+    useEffect(() => {
+        fetchTickets();
+        const interval = setInterval(fetchTickets, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
-        if (tickets.length > 0) {
-            const params = new URLSearchParams(window.location.search);
-            const tkId = params.get('ticketId');
+        const handleOpenTicket = (e: any) => {
+            const tkId = e.detail?.ticketId;
             if (tkId) {
-                const tk = tickets.find(t => t.TicketID === tkId);
-                if (tk && !selectedTicket) {
-                    setSelectedTicket(tk);
-                    window.history.replaceState(null, '', window.location.pathname);
-                }
+                const tk = tickets.find((t: any) => t.TicketID === tkId);
+                if (tk) setSelectedTicket(tk);
             }
-        }
+        };
+        window.addEventListener('OPEN_TICKET', handleOpenTicket);
+        return () => window.removeEventListener('OPEN_TICKET', handleOpenTicket);
     }, [tickets]);
 
     useEffect(() => {

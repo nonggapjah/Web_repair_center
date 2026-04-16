@@ -77,22 +77,25 @@ export default function UserTicketList() {
             }
             setUser(session);
             fetchTickets(session.branchId);
+
+            // Auto-poll user tickets every 5s
+            const interval = setInterval(() => fetchTickets(session.branchId), 5000);
+            return () => clearInterval(interval);
         };
-        init();
+        const cleanup = init();
+        return () => { cleanup.then(fn => fn && fn()); };
     }, []);
 
     useEffect(() => {
-        if (tickets.length > 0) {
-            const params = new URLSearchParams(window.location.search);
-            const tkId = params.get('ticketId');
+        const handleOpenTicket = (e: any) => {
+            const tkId = e.detail?.ticketId;
             if (tkId) {
-                const tk = tickets.find(t => t.TicketID === tkId);
-                if (tk && !selectedTicket) {
-                    setSelectedTicket(tk);
-                    window.history.replaceState(null, '', window.location.pathname);
-                }
+                const tk = tickets.find((t: any) => t.TicketID === tkId);
+                if (tk) setSelectedTicket(tk);
             }
-        }
+        };
+        window.addEventListener('OPEN_TICKET', handleOpenTicket);
+        return () => window.removeEventListener('OPEN_TICKET', handleOpenTicket);
     }, [tickets]);
 
     useEffect(() => {
