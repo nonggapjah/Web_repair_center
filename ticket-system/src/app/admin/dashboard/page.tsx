@@ -32,7 +32,8 @@ const statusColor = (status: string) => {
 };
 
 // SLA Calculation (7 days = Red, 3 days = Yellow)
-const getSLAColor = (ticket: any) => {
+// Return string instead of string | null to satisfy TS compiler in inline styles
+const getSLAColor = (ticket: any): string => {
     if (ticket.CurrentStatus === 'Completed' || ticket.CurrentStatus === 'Closed') {
         return '#10b981';
     }
@@ -41,7 +42,7 @@ const getSLAColor = (ticket: any) => {
     const diffDays = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 3600 * 24));
     if (diffDays >= 7) return '#ef4444';
     if (diffDays >= 3) return '#f59e0b';
-    return null;
+    return 'transparent'; // Use transparent instead of null
 };
 
 export default function AdminDashboard() {
@@ -187,7 +188,6 @@ export default function AdminDashboard() {
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
             <main style={{ padding: '6rem 2rem 2rem', maxWidth: '1800px', width: '100%', margin: '0 auto', flex: 1 }}>
 
-                {/* Custom Responsive Styles */}
                 <style jsx global>{`
                     @media (max-width: 1024px) {
                         .grid-layout { grid-template-columns: 1fr !important; }
@@ -201,7 +201,6 @@ export default function AdminDashboard() {
                 `}</style>
 
                 <div className="animate-fade-in">
-                    {/* Header & Filters */}
                     <div className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
                         <div>
                             <h1 style={{ fontSize: '2.4rem', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>Dashboard</h1>
@@ -234,7 +233,6 @@ export default function AdminDashboard() {
 
                     {viewMode === 'overview' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-                            {/* Counter Cards */}
                             <div className="stat-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1.2rem' }}>
                                 {[
                                     { label: 'งานรวม', count: filteredTickets.length, color: 'var(--accent-primary)', icon: '📋' },
@@ -252,9 +250,7 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
 
-                            {/* Main Content Grid */}
                             <div className="grid-layout" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
-                                {/* Technician Full Details */}
                                 <div className="glass-panel" style={{ padding: '2rem', borderRadius: '28px' }}>
                                     <h3 style={{ marginBottom: '2rem', fontSize: '1.3rem' }}>📁 ภาระงานและผลงานช่าง (ละเอียด)</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -282,7 +278,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Problem Categorization (Pie Chart) */}
                                 <div className="glass-panel" style={{ padding: '2rem', borderRadius: '28px' }}>
                                     <h3 style={{ marginBottom: '2rem', fontSize: '1.3rem' }}>🔍 สรุปประเภทปัญหา</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
@@ -305,7 +300,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Remaining Workload (Bar Chart) */}
                                 <div className="glass-panel" style={{ gridColumn: 'span 2', padding: '2rem', borderRadius: '28px' }}>
                                     <h3 style={{ marginBottom: '2rem', fontSize: '1.3rem' }}>📊 สรุปเคสที่เหลืออยู่ (ปริมาณงานค้างรายช่าง)</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -346,7 +340,7 @@ export default function AdminDashboard() {
                                                     {filteredTickets.filter(t => t.CurrentStatus === status).map((ticket, index) => (
                                                         <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
                                                             {(provided) => (
-                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1rem', background: '#fff', borderLeft: getSLAColor(ticket) ? `5px solid ${getSLAColor(ticket)}` : 'none', ...provided.draggableProps.style }}>
+                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1rem', background: '#fff', borderLeft: getSLAColor(ticket) !== 'transparent' ? `5px solid ${getSLAColor(ticket)}` : 'none', ...provided.draggableProps.style }}>
                                                                     <div style={{ fontSize: '0.75rem', fontWeight: '900', color: 'var(--accent-primary)', marginBottom: '0.4rem' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</div>
                                                                     <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: '700' }}>{ticket.Symptom}</h4>
                                                                     <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: '600' }}>📍 {ticket.Branch?.BranchName || ticket.BranchID}</div>
@@ -380,23 +374,26 @@ export default function AdminDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredTickets.map(t => (
-                                            <tr key={t.TicketID} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '1.2rem 1.5rem' }}>
-                                                    <span className="badge" style={{ background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}50`, fontWeight: '800' }}>{translateStatus(t.CurrentStatus)}</span>
-                                                </td>
-                                                <td style={{ padding: '1.2rem 1.5rem' }}>
-                                                    <div style={{ fontWeight: '800', fontSize: '1rem' }}>{t.Symptom}</div>
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t.Branch?.BranchName || t.BranchID}</div>
-                                                </td>
-                                                <td style={{ padding: '1.2rem 1.5rem', fontWeight: '700' }}>{t.Technician || "-"}</td>
-                                                <td style={{ padding: '1.2rem 1.5rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
-                                                <td style={{ padding: '1.2rem 1.5rem' }}>
-                                                    {getSLAColor(t) && <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: getSLAColor(t) }}></div>}
-                                                </td>
-                                                <td style={{ padding: '1.2rem 1.5rem' }}><button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>จัดการ</button></td>
-                                            </tr>
-                                        ))}
+                                        {filteredTickets.map(t => {
+                                            const slaColor = getSLAColor(t);
+                                            return (
+                                                <tr key={t.TicketID} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                    <td style={{ padding: '1.2rem 1.5rem' }}>
+                                                        <span className="badge" style={{ background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}50`, fontWeight: '800' }}>{translateStatus(t.CurrentStatus)}</span>
+                                                    </td>
+                                                    <td style={{ padding: '1.2rem 1.5rem' }}>
+                                                        <div style={{ fontWeight: '800', fontSize: '1rem' }}>{t.Symptom}</div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t.Branch?.BranchName || t.BranchID}</div>
+                                                    </td>
+                                                    <td style={{ padding: '1.2rem 1.5rem', fontWeight: '700' }}>{t.Technician || "-"}</td>
+                                                    <td style={{ padding: '1.2rem 1.5rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
+                                                    <td style={{ padding: '1.2rem 1.5rem' }}>
+                                                        {slaColor !== 'transparent' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: slaColor }}></div>}
+                                                    </td>
+                                                    <td style={{ padding: '1.2rem 1.5rem' }}><button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>จัดการ</button></td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -405,7 +402,6 @@ export default function AdminDashboard() {
                 </div>
             </main>
 
-            {/* Management Modal */}
             {selectedTicket && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setSelectedTicket(null)}>
                     <div style={{ width: '100%', maxWidth: '950px', maxHeight: '95vh', background: '#fff', borderRadius: '35px', display: 'flex', flexWrap: 'wrap', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
