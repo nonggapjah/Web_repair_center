@@ -1,14 +1,20 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getBranchTickets, updateTicketStatus } from '@/app/actions/tickets';
+import { getBranchTickets, updateTicketStatus, addTicketComment } from '@/app/actions/tickets';
 import { getSession, logout } from '@/app/actions/auth';
+import { supabase } from '@/lib/supabase';
 
 export default function UserTicketList() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+
+    // Timeline/Chat states
+    const [replyMessage, setReplyMessage] = useState('');
+    const [replyFile, setReplyFile] = useState<File | null>(null);
+    const [isReplying, setIsReplying] = useState(false);
 
     const translateStatus = (status: string) => {
         switch (status) {
@@ -75,6 +81,13 @@ export default function UserTicketList() {
         init();
     }, []);
 
+    useEffect(() => {
+        if (!selectedTicket) {
+            setReplyMessage('');
+            setReplyFile(null);
+        }
+    }, [selectedTicket]);
+
     const handleLogout = async () => {
         await logout();
         window.location.href = '/login';
@@ -86,14 +99,54 @@ export default function UserTicketList() {
         const result = await updateTicketStatus(ticketId, 'Closed', 'สาขายืนยันปิดงานเรียบร้อย');
         if (result.success) {
             alert('ปิดงานเรียบร้อยแล้ว');
-            setSelectedTicket(null);
-            if (user) fetchTickets(user.branchId);
+            if (user) {
+                const updatedTickets = await getBranchTickets(user.branchId);
+                setTickets(updatedTickets);
+                const newT = updatedTickets.find(t => t.TicketID === ticketId);
+                setSelectedTicket(newT || null);
+            }
         } else {
             alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
         }
     };
 
+    const handleAddComment = async () => {
+        if (!replyMessage && !replyFile) return;
+        setIsReplying(true);
+        try {
+            let publicUrl = '';
+            if (replyFile) {
+                const fileExt = replyFile.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('tickets').upload(fileName, replyFile);
+                if (uploadError) throw new Error('Upload failed');
+                const { data } = supabase.storage.from('tickets').getPublicUrl(fileName);
+                publicUrl = data.publicUrl;
+            }
+            await addTicketComment(selectedTicket.TicketID, replyMessage, publicUrl, user.userId);
+            setReplyMessage('');
+            setReplyFile(null);
+
+            if (user) {
+                const updatedTickets = await getBranchTickets(user.branchId);
+                setTickets(updatedTickets);
+                const newT = updatedTickets.find(t => t.TicketID === selectedTicket.TicketID);
+                if (newT) setSelectedTicket(newT);
+            }
+        } catch (err) {
+            alert('ไม่สามารถส่งข้อความได้');
+            console.error(err);
+        } finally {
+            setIsReplying(false);
+        }
+    };
+
     if (!user) return null;
+
+    const combinedTimeline = selectedTicket ? [
+        ...(selectedTicket.History || []).map((h: any) => ({ type: 'history', date: h.Timestamp, user: h.UpdatedBy, msg: h.Note, status: h.Status })),
+        ...(selectedTicket.Comments || []).map((c: any) => ({ type: 'comment', date: c.Timestamp, user: c.User?.Role === 'Admin' ? 'แอดมิน' : `สาขา ${user.branchId}`, msg: c.Message, img: c.ImageURL }))
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
 
     return (
         <>
@@ -135,7 +188,7 @@ export default function UserTicketList() {
                                 <tbody>
                                     {tickets.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>ยังไม่มีรายการแจ้งซ่อมในขณะนี้</td>
+                                            <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>ยังไม่มีรายการแจ้งซ่อมในขณะนี้</td>
                                         </tr>
                                     ) : (
                                         tickets.map(ticket => {
@@ -178,7 +231,7 @@ export default function UserTicketList() {
                 </div>
             </main>
 
-            {/* Modal Pop Up ตรงกลางหน้าจอ - ย้ายมานอก main ที่มีการทำ animation stack เพื่อไม่ให้โดน navbar บัง */}
+            {/* Modal Pop Up ตรงกลางหน้าจอ*/}
             {selectedTicket && (
                 <div style={{
                     position: 'fixed',
@@ -196,33 +249,38 @@ export default function UserTicketList() {
                 }} onClick={() => setSelectedTicket(null)}>
                     <div style={{
                         width: '100%',
-                        maxWidth: '550px',
+                        maxWidth: '650px',
                         maxHeight: '90vh',
                         background: '#fff',
                         borderRadius: '28px',
-                        padding: '2rem',
+                        padding: '2.5rem',
                         position: 'relative',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                         overflowY: 'auto'
                     }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ margin: 0, color: 'var(--accent-primary)', fontSize: '1.5rem' }}>คำขอ #{selectedTicket.TicketID.substring(0, 8).toUpperCase()}</h2>
-                            <button onClick={() => setSelectedTicket(null)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, color: 'var(--accent-primary)', fontSize: '1.6rem' }}>คำขอ #{selectedTicket.TicketID.substring(0, 8).toUpperCase()}</h2>
+                                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--accent-secondary)', fontWeight: 'bold' }}>📦 อุปกรณ์: {selectedTicket.Product}</p>
+                            </div>
+                            <button onClick={() => setSelectedTicket(null)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', width: '35px', height: '35px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>&times;</button>
                         </div>
 
                         <div style={{ marginBottom: '1.5rem', background: 'rgba(30,58,138,0.03)', padding: '1.2rem', borderRadius: '15px' }}>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>หมวดหมู่ปัญหา / อุปกรณ์</label>
-                            <p style={{ fontSize: '1.2rem', fontWeight: '700', margin: '0 0 0.5rem 0' }}>{selectedTicket.Symptom}</p>
-                            <p style={{ color: 'var(--accent-secondary)', fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.8rem' }}>📦 อุปกรณ์: {selectedTicket.Product}</p>
-                            {selectedTicket.Technician && (
-                                <div style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                                    ช่างที่รับผิดชอบ: {selectedTicket.Technician}
-                                </div>
-                            )}
-                            <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>หมวดหมู่ปัญหา</label>
+                            <p style={{ fontSize: '1.2rem', fontWeight: '700', margin: '0 0 1rem 0' }}>{selectedTicket.Symptom}</p>
+
+                            <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <span className="badge" style={{ background: statusColor(selectedTicket.CurrentStatus), color: '#fff' }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedTicket.CreatedAt).toLocaleDateString('th-TH')}</span>
                             </div>
+
+                            {selectedTicket.Technician && (
+                                <div style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 'bold', marginTop: '1rem' }}>
+                                    ช่างที่รับผิดชอบ: {selectedTicket.Technician}
+                                </div>
+                            )}
+
                             <div style={{ marginTop: '0.8rem', padding: '0.8rem', background: '#fff', borderRadius: '10px', fontSize: '0.9rem', border: '1px solid rgba(0,0,0,0.05)' }}>
                                 <div style={{ color: 'var(--accent-primary)', fontWeight: 'bold', marginBottom: '0.3rem' }}>
                                     📅 วันที่ขอเข้างาน: {selectedTicket.RequestDate ? new Date(selectedTicket.RequestDate).toLocaleDateString('th-TH') : 'ไม่ได้ระบุ'}
@@ -233,32 +291,49 @@ export default function UserTicketList() {
                             </div>
                         </div>
 
-                        {selectedTicket.ImageURL && (
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>รูปภาพประกอบ</label>
-                                <img
-                                    src={selectedTicket.ImageURL}
-                                    alt="Evidence"
-                                    style={{ width: '100%', borderRadius: '15px', border: '1px solid rgba(0,0,0,0.05)', maxHeight: '300px', objectFit: 'cover', cursor: 'pointer' }}
-                                    onClick={() => window.open(selectedTicket.ImageURL, '_blank')}
-                                />
-                            </div>
-                        )}
+                        <div style={{ marginTop: '1rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                            <p style={{ fontWeight: '900', marginBottom: '0.5rem', color: '#475569' }}>รายละเอียดจากผู้แจ้ง:</p>
+                            <p style={{ color: '#1e293b', lineHeight: '1.6' }}>{selectedTicket.Description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+                            {selectedTicket.ImageURL && (
+                                <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '15px', marginTop: '1rem', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(selectedTicket.ImageURL, '_blank')} />
+                            )}
+                        </div>
 
-                        <div>
-                            <label style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>Timeline ความคืบหน้า</label>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                {selectedTicket.History?.map((h: any, idx: number) => (
-                                    <div key={h.HistoryID} style={{ position: 'relative', paddingLeft: '1.5rem', borderLeft: '2px solid rgba(0,0,0,0.05)' }}>
-                                        <div style={{ position: 'absolute', left: '-6px', top: '0', width: '10px', height: '10px', borderRadius: '50%', background: idx === 0 ? statusColor(h.Status) : 'rgba(0,0,0,0.1)' }} />
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(h.Timestamp).toLocaleString('th-TH')}</div>
-                                        <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{translateStatus(h.Status)}</div>
-                                        {h.Note && <div style={{ background: 'rgba(0,0,0,0.03)', padding: '0.8rem', borderRadius: '8px', fontSize: '0.9rem', marginTop: '0.3rem' }}>{h.Note}</div>}
+                        <hr style={{ margin: '2rem 0', borderColor: '#e2e8f0' }} />
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', marginBottom: '1rem' }}>💬 ไทม์ไลน์ & แชทโต้ตอบ</h3>
+
+                        {/* Timeline display */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+                            {combinedTimeline.length > 0 ? combinedTimeline.map((item, idx) => (
+                                <div key={idx} style={{ padding: '1rem', background: item.type === 'history' ? '#f1f5f9' : '#e0e7ff', borderRadius: '15px', borderLeft: `4px solid ${item.type === 'history' ? '#94a3b8' : '#6366f1'}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>
+                                        <span>{item.type === 'history' ? '🛠️ แอดมินอัปเดตงาน' : '👤 ' + (item.user || '')}</span>
+                                        <span>{new Date(item.date).toLocaleString('th-TH')}</span>
                                     </div>
-                                ))}
+                                    {item.type === 'history' && item.status && (
+                                        <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#fff', borderRadius: '6px', fontWeight: '800', border: '1px solid #cbd5e1', marginRight: '0.5rem' }}>เปลี่ยนสถานะ: {translateStatus(item.status)}</span>
+                                    )}
+                                    {item.msg && <p style={{ color: '#1e293b', fontSize: '0.95rem', marginTop: '0.5rem' }}>{item.msg}</p>}
+                                    {item.img && <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(item.img, '_blank')} />}
+                                </div>
+                            )) : (
+                                <p style={{ color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>ยังไม่มีการพูดคุยหรือการอัปเดต</p>
+                            )}
+                        </div>
+
+                        {/* Reply Input */}
+                        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                            <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>ตอบกลับแอดมิน</label>
+                            <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับ..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '1rem', fontFamily: 'inherit' }} />
+                            <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <input type="file" accept="image/*" id="replyImgUser" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
+                                <label htmlFor="replyImgUser" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📷 ' + replyFile.name : '📷 แนบรูปภาพ'}</label>
+                                {replyFile && <button onClick={() => setReplyFile(null)} style={{ border: 'none', background: 'transparent', color: 'red', fontWeight: '800', cursor: 'pointer' }}>✕</button>}
+                                <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && !replyFile)} style={{ marginLeft: 'auto', background: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
                             </div>
                         </div>
 
+                        {/* Closing Logic */}
                         {selectedTicket.CurrentStatus === 'Completed' && (
                             <div style={{ marginTop: '2rem', padding: '1.5rem', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.05)', border: '1px dashed #10b981' }}>
                                 <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#065f46', textAlign: 'center', fontWeight: 'bold' }}>
@@ -267,9 +342,9 @@ export default function UserTicketList() {
                                 <button
                                     onClick={() => handleConfirmSuccess(selectedTicket.TicketID)}
                                     className="btn-primary"
-                                    style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                    style={{ width: '100%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', border: 'none', padding: '1rem', borderRadius: '12px', fontWeight: '800', color: 'white', cursor: 'pointer' }}
                                 >
-                                    <span>✅ ยืนยันว่าเสร็จเรียบร้อย (ปิดงาน)</span>
+                                    <span>✅ ยืนยันว่าเสร็จเรียบร้อย (ปิดงานถาวร)</span>
                                 </button>
                             </div>
                         )}

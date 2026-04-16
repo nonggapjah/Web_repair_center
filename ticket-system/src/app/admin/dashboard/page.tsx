@@ -1,10 +1,12 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { getAllTickets, updateTicketStatus } from '@/app/actions/tickets';
+import { getAllTickets, updateTicketStatus, addTicketComment } from '@/app/actions/tickets';
+import { supabase } from '@/lib/supabase';
 
 const statuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed", "Closed"];
-const technicians = ["ช่างยศ", "ช่างชา", "ช่างต้น", "ช่างปาด", "ช่างสกล", "ช่างเขียด", "ช่างประวิท", "ช่างเดี่ยว"];
+const adminSelectableStatuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed"]; // No 'Closed'
+const technicians = ["ช่างยศ", "ช่างชา", "ช่างต้น", "ช่างปาด", "ช่างสกล", "ช่างเขียด", "ช่างประวิท", "ช่างเดี่ยว", "ทีมช่างรับเหมา"];
 
 const translateStatus = (status: string) => {
     switch (status) {
@@ -41,6 +43,11 @@ export default function AdminDashboard() {
     const [pendingStatus, setPendingStatus] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
 
+    // Timeline/Chat states
+    const [replyMessage, setReplyMessage] = useState('');
+    const [replyFile, setReplyFile] = useState<File | null>(null);
+    const [isReplying, setIsReplying] = useState(false);
+
     // Filters
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -66,10 +73,14 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (selectedTicket) {
             const lastNote = selectedTicket.History && selectedTicket.History.length > 0 ? selectedTicket.History[0].Note : '';
-            setTechNote(lastNote || '');
+            // setTechNote(lastNote || ''); // Option: do not prefill tech notes so it's only active notes
+            setTechNote('');
             setSelectedTech(selectedTicket.Technician || '');
             setActualDate(selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toISOString().split('T')[0] : '');
             setPendingStatus(selectedTicket.CurrentStatus);
+        } else {
+            setReplyMessage('');
+            setReplyFile(null);
         }
     }, [selectedTicket]);
 
@@ -99,10 +110,41 @@ export default function AdminDashboard() {
         setIsUpdating(true);
         try {
             await updateTicketStatus(selectedTicket.TicketID, pendingStatus, techNote, selectedTech, actualDate);
-            await fetchTickets();
+            const refresh = await getAllTickets();
+            setTickets(refresh);
             setSelectedTicket(null);
             alert('บันทึกสำเร็จ');
         } catch (err) { alert('ผิดพลาด'); } finally { setIsUpdating(false); }
+    };
+
+    const handleAddComment = async () => {
+        if (!replyMessage && !replyFile) return;
+        setIsReplying(true);
+        try {
+            let publicUrl = '';
+            if (replyFile) {
+                const fileExt = replyFile.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('tickets').upload(fileName, replyFile);
+                if (uploadError) throw new Error('Upload failed');
+                const { data } = supabase.storage.from('tickets').getPublicUrl(fileName);
+                publicUrl = data.publicUrl;
+            }
+            await addTicketComment(selectedTicket.TicketID, replyMessage, publicUrl);
+            setReplyMessage('');
+            setReplyFile(null);
+
+            const updatedTickets = await getAllTickets();
+            setTickets(updatedTickets);
+            const newT = updatedTickets.find(t => t.TicketID === selectedTicket.TicketID);
+            if (newT) setSelectedTicket(newT);
+
+        } catch (err) {
+            alert('ไม่สามารถส่งข้อความได้');
+            console.error(err);
+        } finally {
+            setIsReplying(false);
+        }
     };
 
     const handleExport = () => {
@@ -137,6 +179,11 @@ export default function AdminDashboard() {
         return res;
     }).join(', ');
 
+    const combinedTimeline = selectedTicket ? [
+        ...(selectedTicket.History || []).map((h: any) => ({ type: 'history', date: h.Timestamp, user: h.UpdatedBy, msg: h.Note, status: h.Status })),
+        ...(selectedTicket.Comments || []).map((c: any) => ({ type: 'comment', date: c.Timestamp, user: c.User?.Role === 'Admin' ? 'แอดมิน' : 'สาขา', msg: c.Message, img: c.ImageURL }))
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
+
     return (
         <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '6rem 2rem 2rem' }} className="mobile-padded">
             <style jsx global>{`
@@ -148,14 +195,12 @@ export default function AdminDashboard() {
                     .mobile-padded { padding: 4.5rem 0.5rem 1rem !important; }
                     .filter-grid { grid-template-columns: 1fr; } 
                     
-                    /* ตารางเลื่อนได้บนมือถือ */
                     .table-container { 
                         overflow-x: auto !important; 
                         width: 100%; 
                         -webkit-overflow-scrolling: touch; 
                     }
                     
-                    /* การปรับหน้าต่าง Modal ให้เลื่อนบนมือถือได้พอดีจอ */
                     .modal-wrapper { 
                         flex-direction: column !important; 
                         overflow-y: auto !important; 
@@ -173,7 +218,6 @@ export default function AdminDashboard() {
                         padding: 1.5rem !important; 
                     }
                     
-                    /* ส่วนหัวบนสุด */
                     .header-actions { flex-direction: column; width: 100%; }
                     .header-actions > button, .header-actions > div { width: 100%; justify-content: center; }
                     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -197,7 +241,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Filters Section */}
                 <div style={{ padding: '1.5rem', borderRadius: '20px', background: '#fff', marginBottom: '2.5rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
                     <div className="filter-grid">
                         <div>
@@ -354,9 +397,9 @@ export default function AdminDashboard() {
             {/* Modal */}
             {selectedTicket && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setSelectedTicket(null)}>
-                    <div className="modal-wrapper" style={{ background: '#fff', width: '100%', maxWidth: '900px', borderRadius: '25px', display: 'flex', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-wrapper" style={{ background: '#fff', width: '100%', maxWidth: '1100px', borderRadius: '25px', display: 'flex', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
 
-                        <div className="modal-col-left" style={{ flex: 1.2, padding: '2.5rem', overflowY: 'auto', maxHeight: '80vh', borderRight: '1px solid #f1f5f9' }}>
+                        <div className="modal-col-left" style={{ flex: 1.2, padding: '2.5rem', overflowY: 'auto', maxHeight: '85vh', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                                 <div>
                                     <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.Product || 'ไม่ระบุอุปกรณ์'}</h2>
@@ -370,49 +413,85 @@ export default function AdminDashboard() {
                                 <span style={{ display: 'inline-block', whiteSpace: 'nowrap', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(selectedTicket.CurrentStatus) + '20', color: statusColor(selectedTicket.CurrentStatus) }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
                             </div>
 
-                            <div style={{ marginTop: '1rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ marginTop: '1rem', background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                                 <p style={{ fontWeight: '900', marginBottom: '0.5rem', color: '#475569' }}>รายละเอียดจากผู้แจ้ง:</p>
                                 <p style={{ color: '#1e293b', lineHeight: '1.6' }}>{selectedTicket.Description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+                                {selectedTicket.ImageURL && (
+                                    <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '15px', marginTop: '1rem', border: '2px solid #f1f5f9' }} />
+                                )}
                             </div>
 
-                            {selectedTicket.ImageURL && (
-                                <div style={{ marginTop: '1.5rem' }}>
-                                    <p style={{ fontWeight: '900', marginBottom: '0.5rem', color: '#475569' }}>รูปภาพอ้างอิง:</p>
-                                    <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '20px', border: '2px solid #f1f5f9' }} />
+                            <hr style={{ margin: '2rem 0', borderColor: '#e2e8f0' }} />
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', marginBottom: '1rem' }}>💬 ไทม์ไลน์ & แชทโต้ตอบ</h3>
+
+                            {/* Timeline display */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+                                {combinedTimeline.length > 0 ? combinedTimeline.map((item, idx) => (
+                                    <div key={idx} style={{ padding: '1rem', background: item.type === 'history' ? '#f1f5f9' : '#e0e7ff', borderRadius: '15px', borderLeft: `4px solid ${item.type === 'history' ? '#94a3b8' : '#6366f1'}` }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>
+                                            <span>{item.type === 'history' ? '🛠️ อัปเดตงาน' : '👤 ' + (item.user || '')}</span>
+                                            <span>{new Date(item.date).toLocaleString('th-TH')}</span>
+                                        </div>
+                                        {item.type === 'history' && item.status && (
+                                            <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#fff', borderRadius: '6px', fontWeight: '800', border: '1px solid #cbd5e1', marginRight: '0.5rem' }}>เปลี่ยนสถานะ: {translateStatus(item.status)}</span>
+                                        )}
+                                        {item.msg && <p style={{ color: '#1e293b', fontSize: '0.95rem', marginTop: '0.5rem' }}>{item.msg}</p>}
+                                        {item.img && <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1' }} />}
+                                    </div>
+                                )) : (
+                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>ยังไม่มีการพูดคุยหรือการอัปเดต</p>
+                                )}
+                            </div>
+
+                            {/* Reply Input */}
+                            <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>ส่งข้อความ / ตอบกลับ</label>
+                                <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับสาขา..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '1rem' }} />
+                                <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                                    <input type="file" accept="image/*" id="replyImg" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
+                                    <label htmlFor="replyImg" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📷 ' + replyFile.name : '📷 แนบรูปภาพ'}</label>
+                                    {replyFile && <button onClick={() => setReplyFile(null)} style={{ border: 'none', background: 'transparent', color: 'red', fontWeight: '800', cursor: 'pointer' }}>✕</button>}
+                                    <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && !replyFile)} style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        <div className="modal-col-right" style={{ flex: 0.8, background: '#f8fafc', padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>ช่างผู้รับผิดชอบ</label>
-                                <select value={selectedTech} onChange={e => setSelectedTech(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '700' }}>
-                                    <option value="">-- ระบุช่าง --</option>
-                                    {technicians.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
+                        <div className="modal-col-right" style={{ flex: 0.8, background: '#fff', padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ paddingBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', marginBottom: '1.5rem' }}>⚙️ จัดการงานแจ้งซ่อม</h3>
 
-                            <div>
-                                <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>วันที่เข้าซ่อมจริง</label>
-                                <input type="date" value={actualDate} onChange={e => setActualDate(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '700' }} />
-                            </div>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>ช่างผู้รับผิดชอบ</label>
+                                    <select value={selectedTech} onChange={e => setSelectedTech(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '700' }}>
+                                        <option value="">-- ระบุช่าง --</option>
+                                        {technicians.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
 
-                            <div>
-                                <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>บันทึกอาการ / การแก้ไข</label>
-                                <textarea value={techNote} onChange={e => setTechNote(e.target.value)} placeholder="พิมพ์รายละเอียด..." style={{ width: '100%', height: '120px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', resize: 'none' }} />
+                                <div>
+                                    <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>วันที่เข้าซ่อมจริง</label>
+                                    <input type="date" value={actualDate} onChange={e => setActualDate(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '700' }} />
+                                </div>
                             </div>
 
                             <div>
                                 <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.8rem', color: '#475569' }}>เปลี่ยนสถานะงาน</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.6rem' }}>
-                                    {statuses.map(s => (
-                                        <button key={s} onClick={() => setPendingStatus(s)} style={{ padding: '0.8rem', borderRadius: '12px', border: '2px solid', borderColor: pendingStatus === s ? '#6366f1' : 'transparent', background: pendingStatus === s ? '#6366f1' : '#fff', color: pendingStatus === s ? '#fff' : '#475569', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>{translateStatus(s)}</button>
+                                    {adminSelectableStatuses.map(s => (
+                                        <button key={s} onClick={() => setPendingStatus(s)} style={{ padding: '0.8rem', borderRadius: '12px', border: '2px solid', borderColor: pendingStatus === s ? '#10b981' : '#e2e8f0', background: pendingStatus === s ? '#10b981' : '#fff', color: pendingStatus === s ? '#fff' : '#475569', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s', boxShadow: pendingStatus === s ? '0 4px 6px rgba(16, 185, 129, 0.2)' : 'none' }}>{translateStatus(s)}</button>
                                     ))}
                                 </div>
+                                <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.8rem', fontWeight: '800' }}>* สถานะ "ปิดงานถาวร" สาขาจะเป็นผู้กดเพื่อประเมินผลช่าง</p>
                             </div>
 
-                            <button onClick={handleSaveUpdate} disabled={isUpdating} style={{ marginTop: 'auto', width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)' }}>
-                                {isUpdating ? 'กำลังบันทึก...' : '💾 บันทึกการอัปเดต'}
+                            <div>
+                                <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>บันทึกภายในสำหรับแอดมิน</label>
+                                <textarea value={techNote} onChange={e => setTechNote(e.target.value)} placeholder="บันทึกข้อความภายในเมื่ออัปเดต..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', resize: 'none' }} />
+                                <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.3rem' }}>* บันทึกนี้จะลงในประวัติไทม์ไลน์</p>
+                            </div>
+
+                            <button onClick={handleSaveUpdate} disabled={isUpdating} style={{ marginTop: 'auto', width: '100%', padding: '1.2rem', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+                                {isUpdating ? 'กำลังบันทึก...' : '💾 อัปเดตงานแจ้งซ่อม'}
                             </button>
                         </div>
                     </div>

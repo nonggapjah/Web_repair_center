@@ -67,5 +67,6 @@ model TicketComment {
   UserID    String
   User      User         @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
   Message   String
+  ImageURL  String?
   Timestamp DateTime     @default(now())
 }

@@ -113,3 +113,30 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
         return { success: false };
     }
 }
+
+export async function addTicketComment(ticketId: string, message: string, imageUrl?: string, userId?: string) {
+    try {
+        let actualUserId = userId;
+        if (!actualUserId) {
+            const adminUser = await prisma.user.findFirst({ where: { Role: 'Admin' } });
+            if (!adminUser) throw new Error("No admin user found to post comment");
+            actualUserId = adminUser.UserID;
+        }
+
+        await prisma.ticketComment.create({
+            data: {
+                TicketID: ticketId,
+                UserID: actualUserId,
+                Message: message,
+                ImageURL: imageUrl || null
+            }
+        });
+
+        revalidatePath('/user/dashboard');
+        revalidatePath('/admin/dashboard');
+        return { success: true };
+    } catch (error) {
+        console.error("Add comment error:", error);
+        return { success: false, error: "Unable to add comment" };
+    }
+}
