@@ -225,12 +225,11 @@ export default function AdminDashboard() {
                 }
 
                 @media print {
-                    body * { visibility: hidden; }
-                    .print-area, .print-area * { visibility: visible; }
-                    .print-area { position: absolute; left: 0; top: 0; width: 100%; height: auto !important; max-height: none !important; overflow: visible !important; display: block; padding: 0 !important; background: white !important;}
-                    .no-print { display: none !important; }
-                    .modal-wrapper { flex-direction: column !important; box-shadow: none !important; }
-                    .modal-col-left { overflow: visible !important; max-height: none !important; padding: 0 !important; border: none !important; }
+                    body > main, nav, header, footer { display: none !important; }
+                    .modal-backdrop { position: absolute !important; inset: 0 !important; background: white !important; padding: 0 !important; align-items: flex-start !important; justify-content: flex-start !important; display: block !important; }
+                    .modal-wrapper { width: 100% !important; max-width: none !important; border-radius: 0 !important; box-shadow: none !important; flex-direction: column !important; display: block !important; overflow: visible !important; }
+                    .modal-col-left { width: 100% !important; max-height: none !important; overflow: visible !important; background: white !important; padding: 1rem 2rem !important; border: none !important; }
+                    .modal-col-right, .no-print { display: none !important; }
                 }
             `}</style>
 
@@ -405,7 +404,7 @@ export default function AdminDashboard() {
 
             {/* Modal */}
             {selectedTicket && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setSelectedTicket(null)}>
+                <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setSelectedTicket(null)}>
                     <div className="modal-wrapper" style={{ background: '#fff', width: '100%', maxWidth: '1100px', borderRadius: '25px', display: 'flex', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
 
                         <div className="modal-col-left print-area" style={{ flex: 1.2, padding: '2.5rem', overflowY: 'auto', maxHeight: '85vh', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
