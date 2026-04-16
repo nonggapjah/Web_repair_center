@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                 }
 
                 @media print {
-                    body > main, nav, header, footer { display: none !important; }
+                    main, nav, header, footer { display: none !important; }
                     .modal-backdrop { position: absolute !important; inset: 0 !important; background: white !important; padding: 0 !important; align-items: flex-start !important; justify-content: flex-start !important; display: block !important; }
                     .modal-wrapper { width: 100% !important; max-width: none !important; border-radius: 0 !important; box-shadow: none !important; flex-direction: column !important; display: block !important; overflow: visible !important; }
                     .modal-col-left { width: 100% !important; max-height: none !important; overflow: visible !important; background: white !important; padding: 1rem 2rem !important; border: none !important; }
