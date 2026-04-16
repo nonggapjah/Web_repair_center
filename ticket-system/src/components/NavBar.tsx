@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { logout } from '@/app/actions/auth';
 import { useEffect, useState } from 'react';
 
+import { NotificationBell } from './NotificationBell';
+
 export function NavBar() {
     const [showHeader, setShowHeader] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
@@ -50,7 +52,10 @@ export function NavBar() {
                         <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>Villa Market</div>
                     </div>
                 </Link>
-                <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>Logout</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <NotificationBell />
+                    <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>Logout</button>
+                </div>
             </div>
         </nav>
     );

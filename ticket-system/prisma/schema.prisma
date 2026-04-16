@@ -70,3 +70,14 @@ model TicketComment {
   ImageURL  String?
   Timestamp DateTime     @default(now())
 }
+
+model Notification {
+  NotifID    String   @id @default(cuid())
+  TargetRole String?  // 'Admin' or 'Branch'
+  TargetUser String?  // Specific BranchID
+  Title      String
+  Message    String
+  TicketID   String?
+  IsRead     Boolean  @default(false)
+  CreatedAt  DateTime @default(now())
+}
