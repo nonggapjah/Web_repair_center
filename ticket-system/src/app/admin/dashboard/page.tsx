@@ -223,6 +223,15 @@ export default function AdminDashboard() {
                     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
                     .stats-overall { grid-template-columns: 1fr !important; }
                 }
+
+                @media print {
+                    body * { visibility: hidden; }
+                    .print-area, .print-area * { visibility: visible; }
+                    .print-area { position: absolute; left: 0; top: 0; width: 100%; height: auto !important; max-height: none !important; overflow: visible !important; display: block; padding: 0 !important; background: white !important;}
+                    .no-print { display: none !important; }
+                    .modal-wrapper { flex-direction: column !important; box-shadow: none !important; }
+                    .modal-col-left { overflow: visible !important; max-height: none !important; padding: 0 !important; border: none !important; }
+                }
             `}</style>
 
             <main style={{ maxWidth: '1600px', margin: '0 auto' }}>
@@ -399,13 +408,16 @@ export default function AdminDashboard() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setSelectedTicket(null)}>
                     <div className="modal-wrapper" style={{ background: '#fff', width: '100%', maxWidth: '1100px', borderRadius: '25px', display: 'flex', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
 
-                        <div className="modal-col-left" style={{ flex: 1.2, padding: '2.5rem', overflowY: 'auto', maxHeight: '85vh', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
+                        <div className="modal-col-left print-area" style={{ flex: 1.2, padding: '2.5rem', overflowY: 'auto', maxHeight: '85vh', borderRight: '1px solid #f1f5f9', background: '#fafafa' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                                 <div>
                                     <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.Product || 'ไม่ระบุอุปกรณ์'}</h2>
                                     <p style={{ color: '#6366f1', fontWeight: '800', marginTop: '0.4rem' }}>หมวดหมู่: {selectedTicket.Symptom}</p>
                                 </div>
-                                <button onClick={() => setSelectedTicket(null)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', fontSize: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>×</button>
+                                <div style={{ display: 'flex', gap: '0.5rem' }} className="no-print">
+                                    <button onClick={() => window.print()} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>🖨️ ปริ้นใบงาน</button>
+                                    <button onClick={() => setSelectedTicket(null)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', fontSize: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>×</button>
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
@@ -444,7 +456,7 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Reply Input */}
-                            <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                            <div className="no-print" style={{ background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                                 <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>ส่งข้อความ / ตอบกลับ</label>
                                 <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับสาขา..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '1rem' }} />
                                 <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>

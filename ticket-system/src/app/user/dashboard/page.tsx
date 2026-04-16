@@ -150,6 +150,13 @@ export default function UserTicketList() {
 
     return (
         <>
+            <style jsx global>{`
+                @media (max-width: 768px) {
+                    .flex-mobile-col { flex-direction: column !important; align-items: stretch !important; text-align: left; }
+                    .flex-mobile-col > div { margin-bottom: 1rem; }
+                    .table-container { overflow-x: auto !important; width: 100%; -webkit-overflow-scrolling: touch; }
+                }
+            `}</style>
             <main className="container" style={{ padding: '2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
                 <div className="animate-fade-in">
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
@@ -158,11 +165,11 @@ export default function UserTicketList() {
 
                     <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="flex-mobile-col">
                         <div>
-                            <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>รายการแจ้งซ่อมสาขา {user.branchId}</h1>
+                            <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem', marginBottom: '0.5rem' }}>รายการแจ้งซ่อมสาขา {user.branchId}</h1>
                             <p style={{ color: 'var(--text-muted)' }}>{user.branchName} | ติดตามสถานะเฉพาะของสาขาคุณ</p>
                         </div>
                         <Link href={`/user/new-ticket?branchId=${user.branchId}`} style={{ textDecoration: 'none' }}>
-                            <span className="btn-primary" style={{ display: 'inline-block' }}>+ แจ้งซ่อมรายการใหม่</span>
+                            <span className="btn-primary" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '0.8rem', borderRadius: '12px', fontWeight: '800' }}>+ แจ้งซ่อมรายการใหม่</span>
                         </Link>
                     </div>
 
@@ -171,18 +178,21 @@ export default function UserTicketList() {
                             <p style={{ color: 'var(--text-muted)' }}>กำลังดึงข้อมูล...</p>
                         </div>
                     ) : (
-                        <div className="glass-panel responsive-table-container" style={{ padding: '0', overflow: 'hidden' }}>
-                            <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div className="glass-panel table-container" style={{ padding: '0', borderRadius: '20px', background: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}>
+                            <div style={{ padding: '1rem', background: '#fef3c7', color: '#92400e', fontSize: '0.85rem', fontWeight: '800', borderRadius: '20px 20px 0 0', textAlign: 'center' }} className="d-block d-md-none">
+                                👈 ปัดซ้าย-ขวา เพื่อดูข้อมูลเพิ่มเติม 👉
+                            </div>
+                            <table style={{ width: '100%', minWidth: '900px', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
-                                    <tr style={{ background: 'rgba(30, 58, 138, 0.05)' }}>
-                                        <th style={{ padding: '1.2rem' }}>รหัส</th>
-                                        <th style={{ padding: '1.2rem' }}>หมวดหมู่</th>
-                                        <th style={{ padding: '1.2rem' }}>อุปกรณ์</th>
-                                        <th style={{ padding: '1.2rem' }}>อัปเดตล่าสุด</th>
-                                        <th style={{ padding: '1.2rem' }}>สถานะ</th>
-                                        <th style={{ padding: '1.2rem' }}>วันที่สาขาขอ</th>
-                                        <th style={{ padding: '1.2rem' }}>วันที่ช่างเข้าจริง</th>
-                                        <th style={{ padding: '1.2rem' }}>ช่างที่รับผิดชอบ</th>
+                                    <tr style={{ background: '#f8fafc' }}>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>รหัส</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>หมวดหมู่</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>อุปกรณ์</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>อัปเดตล่าสุด</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>สถานะ</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>วันที่สาขาขอ</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>วันที่ช่างเข้าจริง</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>ช่างที่รับผิดชอบ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
