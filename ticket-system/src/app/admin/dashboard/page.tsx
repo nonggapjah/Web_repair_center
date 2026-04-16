@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
     const fetchTickets = async () => {
         try {
-            const data = await getAllTickets();
+            const data = await getAllTickets(Date.now());
             setTickets(data);
         } catch (error) {
             console.error("Fetch error:", error);
@@ -84,6 +84,20 @@ export default function AdminDashboard() {
         };
         window.addEventListener('OPEN_TICKET', handleOpenTicket);
         return () => window.removeEventListener('OPEN_TICKET', handleOpenTicket);
+    }, [tickets]);
+
+    // Keep currently opened ticket modal synced with live data
+    useEffect(() => {
+        if (selectedTicket && tickets.length > 0) {
+            const freshTk = tickets.find(t => t.TicketID === selectedTicket.TicketID);
+            if (freshTk) {
+                if (freshTk.Comments?.length !== selectedTicket.Comments?.length ||
+                    freshTk.History?.length !== selectedTicket.History?.length ||
+                    freshTk.CurrentStatus !== selectedTicket.CurrentStatus) {
+                    setSelectedTicket(freshTk);
+                }
+            }
+        }
     }, [tickets]);
 
     useEffect(() => {
@@ -150,7 +164,7 @@ export default function AdminDashboard() {
             setReplyMessage('');
             setReplyFile(null);
 
-            const updatedTickets = await getAllTickets();
+            const updatedTickets = await getAllTickets(Date.now());
             setTickets(updatedTickets);
             const newT = updatedTickets.find(t => t.TicketID === selectedTicket.TicketID);
             if (newT) setSelectedTicket(newT);

@@ -35,7 +35,7 @@ export function NotificationBell() {
             const session = await getSession();
             if (session) {
                 setUser(session);
-                const data = await getUserNotifications(session.branchId, session.role);
+                const data = await getUserNotifications(session.branchId, session.role, Date.now());
                 setNotifs(data);
 
                 const currentUnread = data.filter((n: any) => !n.IsRead).length;

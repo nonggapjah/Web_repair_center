@@ -63,7 +63,7 @@ export async function createTicket(formData: {
     }
 }
 
-export async function getBranchTickets(branchId: string) {
+export async function getBranchTickets(branchId: string, _t?: number) {
     noStore();
     return await prisma.repairTicket.findMany({
         where: { BranchID: branchId },
@@ -81,7 +81,7 @@ export async function getBranchTickets(branchId: string) {
     });
 }
 
-export async function getAllTickets() {
+export async function getAllTickets(_t?: number) {
     noStore();
     return await prisma.repairTicket.findMany({
         include: {
@@ -193,7 +193,7 @@ export async function addTicketComment(ticketId: string, message: string, imageU
 }
 
 // ---- Notifications Endpoints ----
-export async function getUserNotifications(branchId: string, role: string) {
+export async function getUserNotifications(branchId: string, role: string, _t?: number) {
     noStore();
     if (role === 'Admin') {
         return await prisma.notification.findMany({

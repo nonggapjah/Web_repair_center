@@ -59,7 +59,7 @@ export default function UserTicketList() {
 
     const fetchTickets = async (branchId: string) => {
         try {
-            const data = await getBranchTickets(branchId);
+            const data = await getBranchTickets(branchId, Date.now());
             setTickets(data);
         } catch (error) {
             console.error("Fetch tickets error:", error);
@@ -98,6 +98,20 @@ export default function UserTicketList() {
         return () => window.removeEventListener('OPEN_TICKET', handleOpenTicket);
     }, [tickets]);
 
+    // Keep currently opened ticket modal synced with live data
+    useEffect(() => {
+        if (selectedTicket && tickets.length > 0) {
+            const freshTk = tickets.find(t => t.TicketID === selectedTicket.TicketID);
+            if (freshTk) {
+                if (freshTk.Comments?.length !== selectedTicket.Comments?.length ||
+                    freshTk.History?.length !== selectedTicket.History?.length ||
+                    freshTk.CurrentStatus !== selectedTicket.CurrentStatus) {
+                    setSelectedTicket(freshTk);
+                }
+            }
+        }
+    }, [tickets]);
+
     useEffect(() => {
         if (!selectedTicket) {
             setReplyMessage('');
@@ -117,7 +131,7 @@ export default function UserTicketList() {
         if (result.success) {
             alert('ปิดงานเรียบร้อยแล้ว');
             if (user) {
-                const updatedTickets = await getBranchTickets(user.branchId);
+                const updatedTickets = await getBranchTickets(user.branchId, Date.now());
                 setTickets(updatedTickets);
                 const newT = updatedTickets.find(t => t.TicketID === ticketId);
                 setSelectedTicket(newT || null);
@@ -145,7 +159,7 @@ export default function UserTicketList() {
             setReplyFile(null);
 
             if (user) {
-                const updatedTickets = await getBranchTickets(user.branchId);
+                const updatedTickets = await getBranchTickets(user.branchId, Date.now());
                 setTickets(updatedTickets);
                 const newT = updatedTickets.find(t => t.TicketID === selectedTicket.TicketID);
                 if (newT) setSelectedTicket(newT);
