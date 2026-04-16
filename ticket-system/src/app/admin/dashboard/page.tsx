@@ -439,7 +439,7 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '1rem', fontWeight: '900', fontSize: '0.95rem' }}>🚦 เปลี่ยนสถานะงาน:</label>
-                                <div style={{ display: grid, gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem' }}>
                                     {statuses.map(s => (
                                         <button key={s} onClick={() => setPendingStatus(s)} style={{ padding: '0.9rem', borderRadius: '15px', border: '2px solid', borderColor: pendingStatus === s ? 'var(--accent-primary)' : 'transparent', background: pendingStatus === s ? 'var(--accent-primary)' : '#fff', color: pendingStatus === s ? '#fff' : '#1e293b', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '900', transition: 'all 0.25s shadow-sm' }}>{translateStatus(s)}</button>
                                     ))}
