@@ -71,6 +71,20 @@ export default function AdminDashboard() {
     useEffect(() => { fetchTickets(); }, []);
 
     useEffect(() => {
+        if (tickets.length > 0) {
+            const params = new URLSearchParams(window.location.search);
+            const tkId = params.get('ticketId');
+            if (tkId) {
+                const tk = tickets.find(t => t.TicketID === tkId);
+                if (tk && !selectedTicket) {
+                    setSelectedTicket(tk);
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+            }
+        }
+    }, [tickets]);
+
+    useEffect(() => {
         if (selectedTicket) {
             const lastNote = selectedTicket.History && selectedTicket.History.length > 0 ? selectedTicket.History[0].Note : '';
             // setTechNote(lastNote || ''); // Option: do not prefill tech notes so it's only active notes

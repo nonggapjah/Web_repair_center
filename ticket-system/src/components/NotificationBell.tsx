@@ -1,25 +1,52 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSession } from '@/app/actions/auth';
 import { getUserNotifications, markNotificationRead } from '@/app/actions/tickets';
 
+const playNotificationSound = () => {
+    try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+        osc.stop(ctx.currentTime + 0.5);
+    } catch (e) { }
+};
+
 export function NotificationBell() {
+    const router = useRouter();
     const [notifs, setNotifs] = useState<any[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
     const popupRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        let prevUnreadCount = 0;
         const init = async () => {
             const session = await getSession();
             if (session) {
                 setUser(session);
                 const data = await getUserNotifications(session.branchId, session.role);
                 setNotifs(data);
+
+                const currentUnread = data.filter((n: any) => !n.IsRead).length;
+                if (currentUnread > prevUnreadCount && prevUnreadCount !== 0) {
+                    playNotificationSound();
+                }
+                prevUnreadCount = currentUnread;
             }
         };
         init();
-        const interval = setInterval(init, 30000); // refresh every 30s
+        const interval = setInterval(init, 15000); // refresh every 15s
         return () => clearInterval(interval);
     }, []);
 
@@ -37,10 +64,14 @@ export function NotificationBell() {
 
     const unreadCount = notifs.filter(n => !n.IsRead).length;
 
-    const handleRead = async (notif: any) => {
+    const handleReadClick = async (notif: any) => {
         if (!notif.IsRead) {
             await markNotificationRead(notif.NotifID);
             setNotifs(notifs.map(n => n.NotifID === notif.NotifID ? { ...n, IsRead: true } : n));
+        }
+        setIsOpen(false);
+        if (notif.TicketID) {
+            router.push(`?ticketId=${notif.TicketID}`);
         }
     };
 
@@ -68,7 +99,7 @@ export function NotificationBell() {
                         <div style={{ padding: '2rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>ไม่มีการแจ้งเตือน</div>
                     ) : (
                         notifs.map(n => (
-                            <div key={n.NotifID} onClick={() => handleRead(n)} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', background: n.IsRead ? '#fff' : '#f0f9ff', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                            <div key={n.NotifID} onClick={() => handleReadClick(n)} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', background: n.IsRead ? '#fff' : '#f0f9ff', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div style={{ fontSize: '0.85rem', fontWeight: '800', color: n.IsRead ? '#475569' : '#1e40af' }}>{n.Title} {!n.IsRead && <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', marginLeft: '5px' }} />}</div>
                                 </div>

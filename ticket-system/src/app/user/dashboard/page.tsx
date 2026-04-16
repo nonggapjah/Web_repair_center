@@ -82,6 +82,20 @@ export default function UserTicketList() {
     }, []);
 
     useEffect(() => {
+        if (tickets.length > 0) {
+            const params = new URLSearchParams(window.location.search);
+            const tkId = params.get('ticketId');
+            if (tkId) {
+                const tk = tickets.find(t => t.TicketID === tkId);
+                if (tk && !selectedTicket) {
+                    setSelectedTicket(tk);
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+            }
+        }
+    }, [tickets]);
+
+    useEffect(() => {
         if (!selectedTicket) {
             setReplyMessage('');
             setReplyFile(null);
