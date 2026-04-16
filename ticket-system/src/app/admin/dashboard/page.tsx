@@ -82,7 +82,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (selectedTicket) {
             setTechNote(selectedTicket.TechnicianNote || '');
-            setSelectedTech(selectedTicket.Technician || '');
+            setSelectedTech(selectedTech || selectedTicket.Technician || '');
             setActualDate(selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toISOString().split('T')[0] : '');
             setPendingStatus(selectedTicket.CurrentStatus);
         }
@@ -193,60 +193,73 @@ export default function AdminDashboard() {
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
-            <main style={{ padding: '6rem 2rem 2rem', maxWidth: '1800px', width: '100%', margin: '0 auto', flex: 1 }}>
+            <main style={{ padding: '5rem 1rem 2rem', maxWidth: '100%', margin: '0 auto', flex: 1, overflowX: 'hidden' }}>
+                <style jsx global>{`
+                    @media (max-width: 768px) {
+                        .responsive-grid { grid-template-columns: 1fr !important; }
+                        .stat-card-row { grid-template-columns: repeat(2, 1fr) !important; }
+                        .glass-panel { padding: 1rem !important; margin-bottom: 1rem; border-radius: 12px !important; }
+                        h1 { font-size: 1.5rem !important; }
+                        table { display: block; overflow-x: auto; white-space: nowrap; }
+                        .header-row { flex-direction: column !important; align-items: stretch !important; gap: 1rem !important; }
+                        .filter-box { flex-direction: column !important; align-items: stretch !important; gap: 0.5rem !important; }
+                        .filter-box > div { justify-content: space-between; }
+                    }
+                `}</style>
+
                 <div className="animate-fade-in">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', gap: '1rem' }}>
+                    <div className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', gap: '1rem' }}>
                         <div>
-                            <h1 style={{ fontSize: '2.2rem', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>Dashboard</h1>
-                            <p style={{ color: 'var(--text-muted)' }}>สรุปภาพรวมและจัดการระบบแจ้งซ่อม</p>
+                            <h1 style={{ fontSize: '2.2rem', color: 'var(--accent-primary)', marginBottom: '0.2rem' }}>Dashboard</h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>สรุปภาพรวมและจัดการระบบแจ้งซ่อม</p>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
-                            <div className="glass-panel" style={{ padding: '0.8rem 1.2rem', display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '15px', border: '1px solid #e2e8f0' }}>
+                            <div className="glass-panel filter-box" style={{ padding: '0.8rem 1rem', display: 'flex', alignItems: 'center', gap: '1rem', borderRadius: '15px', border: '1px solid #e2e8f0', background: '#fff' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>ตั้งแต่วันที่:</label>
-                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem' }} />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b' }}>ตั้งแต่วันที่:</label>
+                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ padding: '0.3rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.8rem' }} />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>ถึงวันที่:</label>
-                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem' }} />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b' }}>ถึงวันที่:</label>
+                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ padding: '0.3rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.8rem' }} />
                                 </div>
-                                {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate(''); }} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '700' }}>ล้าง</button>}
+                                {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate(''); }} style={{ background: '#f1f5f9', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: '700' }}>ล้าง</button>}
                             </div>
 
-                            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                                <button onClick={handleExport} style={{ padding: '0.6rem 1rem', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', background: '#fff', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' }}>📥 Export</button>
-                                <div style={{ background: '#e2e8f0', padding: '0.3rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                                    <button onClick={() => setViewMode('overview')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>สรุป</button>
-                                    <button onClick={() => setViewMode('kanban')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>บอร์ด</button>
-                                    <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 1.2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600' }}>ตาราง</button>
+                            <div style={{ display: 'flex', gap: '0.5rem', width: '100%', justifyContent: 'flex-end' }}>
+                                <button onClick={handleExport} style={{ padding: '0.5rem 0.8rem', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', background: '#fff', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '0.8rem' }}>📥 Export</button>
+                                <div style={{ background: '#e2e8f0', padding: '0.2rem', borderRadius: '10px', display: 'flex', gap: '0.1rem' }}>
+                                    <button onClick={() => setViewMode('overview')} style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: viewMode === 'overview' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'overview' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.8rem' }}>สรุป</button>
+                                    <button onClick={() => setViewMode('kanban')} style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: viewMode === 'kanban' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.8rem' }}>บอร์ด</button>
+                                    <button onClick={() => setViewMode('list')} style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)', fontWeight: '600', fontSize: '0.8rem' }}>ตาราง</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {viewMode === 'overview' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1.2rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div className="stat-card-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
                                 {[
-                                    { label: 'งานรวมช่วงนี้', count: filteredTickets.length, color: 'var(--accent-primary)', icon: '📋' },
-                                    { label: 'รอดำเนินการ', count: filteredTickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
-                                    { label: 'กำลังซ่อม', count: filteredTickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
+                                    { label: 'งานรวม', count: filteredTickets.length, color: 'var(--accent-primary)', icon: '📋' },
+                                    { label: 'รอรับ', count: filteredTickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, color: '#f59e0b', icon: '⏳' },
+                                    { label: 'ทำอยู่', count: filteredTickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, color: '#3b82f6', icon: '🛠️' },
                                     { label: 'รออะไหล่', count: filteredTickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, color: '#ef4444', icon: '📦' },
-                                    { label: 'สำเร็จ', count: filteredTickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
+                                    { label: 'เสร็จ', count: filteredTickets.filter(t => t.CurrentStatus === 'Completed').length, color: '#10b981', icon: '✅' }
                                 ].map((card, i) => (
-                                    <div key={i} className="glass-panel" style={{ padding: '1.2rem', textAlign: 'center', borderRadius: '20px' }}>
-                                        <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{card.icon}</div>
-                                        <div style={{ color: card.color, fontSize: '2rem', fontWeight: '800' }}>{card.count}</div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: '600' }}>{card.label}</div>
+                                    <div key={i} className="glass-panel" style={{ padding: '1rem', textAlign: 'center', borderRadius: '15px', border: '1px solid #f1f5f9' }}>
+                                        <div style={{ fontSize: '1.2rem', marginBottom: '0.3rem' }}>{card.icon}</div>
+                                        <div style={{ color: card.color, fontSize: '1.6rem', fontWeight: '800' }}>{card.count}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: '700' }}>{card.label}</div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
-                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>📈 ภาระงานและผลงานช่าง</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                            <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem' }}>
+                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '20px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📈 ภาระงานและผลงานช่าง</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                         {technicians.map(tech => {
                                             const techAll = filteredTickets.filter(t => t.Technician === tech);
                                             const pend = techAll.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus));
@@ -255,14 +268,13 @@ export default function AdminDashboard() {
                                             const done = techAll.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus));
                                             return (
                                                 <div key={tech} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '0.8rem' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', alignItems: 'center' }}>
-                                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1.05rem' }}>ช่าง {tech}</span>
-                                                        <div style={{ display: 'flex', gap: '0.3rem' }}>
-                                                            <span style={{ background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700' }}>รวม {techAll.length}</span>
-                                                            <span style={{ background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#92400e' }}>รอ {pend.length}</span>
-                                                            <span style={{ background: '#dbeafe', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#1e40af' }}>ทำ {proc.length}</span>
-                                                            <span style={{ background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#991b1b' }}>อะไหล่ {wait.length}</span>
-                                                            <span style={{ background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', color: '#166534' }}>เสร็จ {done.length}</span>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', alignItems: 'center' }}>
+                                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '1rem' }}>{tech}</span>
+                                                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                                            <span style={{ background: '#fef3c7', padding: '0.2rem 0.4rem', borderRadius: '5px', fontSize: '0.65rem', fontWeight: '700', color: '#92400e' }}>รอ {pend.length}</span>
+                                                            <span style={{ background: '#dbeafe', padding: '0.2rem 0.4rem', borderRadius: '5px', fontSize: '0.65rem', fontWeight: '700', color: '#1e40af' }}>ทำ {proc.length}</span>
+                                                            <span style={{ background: '#fee2e2', padding: '0.2rem 0.4rem', borderRadius: '5px', fontSize: '0.65rem', fontWeight: '700', color: '#991b1b' }}>อะไหล่ {wait.length}</span>
+                                                            <span style={{ background: '#dcfce7', padding: '0.2rem 0.4rem', borderRadius: '5px', fontSize: '0.65rem', fontWeight: '700', color: '#166534' }}>เสร็จ {done.length}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -271,45 +283,44 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>🔍 สรุปประเภทปัญหา</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
+                                <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '20px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>🔍 สรุปประเภทปัญหา</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
                                         <div style={{
-                                            width: '200px', height: '200px', borderRadius: '50%',
+                                            width: '180px', height: '180px', borderRadius: '50%',
                                             background: sortedSymptoms.length > 0 ? `conic-gradient(${conicGradientString})` : '#f1f5f9',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
                                         }}>
-                                            <div style={{ width: '130px', height: '130px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: '800', color: '#64748b' }}>{totalSymptoms} เคส</div>
+                                            <div style={{ width: '120px', height: '120px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>{totalSymptoms} เคส</div>
                                         </div>
-                                        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                                        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.6rem' }}>
                                             {segments.map(s => (
-                                                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                                                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: s.color }}></div>
-                                                    <span style={{ fontWeight: '700' }}>{s.label} ({Math.round(s.percentage)}%)</span>
+                                                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem' }}>
+                                                    <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }}></div>
+                                                    <span style={{ fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label} ({Math.round(s.percentage)}%)</span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="glass-panel" style={{ gridColumn: 'span 2', padding: '1.5rem', borderRadius: '24px' }}>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>📊 สรุปเคสที่เหลืออยู่ (ปริมาณงานแยกตามช่าง)</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div className="glass-panel" style={{ gridColumn: 'span 2', padding: '1.5rem', borderRadius: '20px' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>📊 สรุปเคสที่เหลืออยู่</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         {technicians.map(tech => {
                                             const techAll = filteredTickets.filter(t => t.Technician === tech);
                                             const remaining = techAll.filter(t => !['Completed', 'Closed'].includes(t.CurrentStatus)).length;
                                             const maxRemaining = Math.max(...technicians.map(te => filteredTickets.filter(t => t.Technician === te && !['Completed', 'Closed'].includes(t.CurrentStatus)).length)) || 1;
                                             const barWidth = (remaining / maxRemaining) * 100;
-
                                             return (
-                                                <div key={tech} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                    <div style={{ width: '100px', fontWeight: '800', fontSize: '0.9rem' }}>ช่าง {tech}</div>
-                                                    <div style={{ flex: 1, height: '20px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${barWidth}%`, height: '100%', background: 'linear-gradient(90deg, #7c3aed, #4f46e5)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '10px' }}>
-                                                            {remaining > 0 && <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: '800' }}>{remaining} เคส</span>}
+                                                <div key={tech} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                                    <div style={{ width: '80px', fontWeight: '800', fontSize: '0.85rem' }}>{tech}</div>
+                                                    <div style={{ flex: 1, height: '18px', background: '#f1f5f9', borderRadius: '9px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${barWidth}%`, height: '100%', background: 'linear-gradient(90deg, #7c3aed, #4f46e5)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '10px' }}>
+                                                            {remaining > 0 && <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: '800' }}>{remaining}</span>}
                                                         </div>
                                                     </div>
-                                                    {remaining === 0 && <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '800' }}>ไม่มีงานค้าง</span>}
+                                                    {remaining === 0 && <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: '800' }}>สมบูรณ์</span>}
                                                 </div>
                                             );
                                         })}
@@ -321,23 +332,23 @@ export default function AdminDashboard() {
 
                     {viewMode === 'kanban' && (
                         <DragDropContext onDragEnd={onDragEnd}>
-                            <div style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
+                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '1rem', minHeight: '70vh' }}>
                                 {statuses.map(status => (
-                                    <div key={status} style={{ minWidth: '280px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h3 style={{ fontSize: '1.1rem' }}>{translateStatus(status)}</h3>
-                                            <span style={{ background: '#e2e8f0', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.8rem' }}>{filteredTickets.filter(t => t.CurrentStatus === status).length}</span>
+                                    <div key={status} style={{ minWidth: '260px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                                            <h3 style={{ fontSize: '1rem' }}>{translateStatus(status)}</h3>
+                                            <span style={{ background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px', fontSize: '0.75rem' }}>{filteredTickets.filter(t => t.CurrentStatus === status).length}</span>
                                         </div>
                                         <Droppable droppableId={status}>
                                             {(provided) => (
-                                                <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: '#f1f5f9', borderRadius: '16px', padding: '0.8rem' }}>
+                                                <div ref={provided.innerRef} {...provided.droppableProps} style={{ flex: 1, background: '#f1f5f9', borderRadius: '12px', padding: '0.6rem' }}>
                                                     {filteredTickets.filter(t => t.CurrentStatus === status).map((ticket, index) => (
                                                         <Draggable key={ticket.TicketID} draggableId={ticket.TicketID} index={index}>
                                                             {(provided) => (
-                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '1rem', marginBottom: '0.8rem', background: '#fff', borderLeft: getSLAColor(ticket) ? `4px solid ${getSLAColor(ticket)}` : 'none', ...provided.draggableProps.style }}>
-                                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)', marginBottom: '0.3rem' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</div>
-                                                                    <h4 style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{ticket.Symptom}</h4>
-                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{ticket.Branch?.BranchName || ticket.BranchID}</div>
+                                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedTicket(ticket)} className="glass-panel" style={{ padding: '0.8rem', marginBottom: '0.6rem', background: '#fff', borderLeft: getSLAColor(ticket) ? `3px solid ${getSLAColor(ticket)}` : 'none', ...provided.draggableProps.style }}>
+                                                                    <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--accent-primary)', marginBottom: '0.2rem' }}>#{ticket.TicketID.substring(0, 8).toUpperCase()}</div>
+                                                                    <h4 style={{ fontSize: '0.9rem', marginBottom: '0.2rem' }}>{ticket.Symptom}</h4>
+                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{ticket.Branch?.BranchName || ticket.BranchID}</div>
                                                                 </div>
                                                             )}
                                                         </Draggable>
@@ -353,29 +364,29 @@ export default function AdminDashboard() {
                     )}
 
                     {viewMode === 'list' && (
-                        <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', borderRadius: '20px' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="glass-panel" style={{ padding: '0', overflowX: 'auto', borderRadius: '15px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                                 <thead style={{ background: '#f8fafc' }}>
                                     <tr>
-                                        <th style={{ padding: '1.2rem', textAlign: 'left' }}>สถานะ</th>
-                                        <th style={{ padding: '1.2rem', textAlign: 'left' }}>รหัส</th>
-                                        <th style={{ padding: '1.2rem', textAlign: 'left' }}>หมวดหมู่</th>
-                                        <th style={{ padding: '1.2rem', textAlign: 'left' }}>สาขา</th>
-                                        <th style={{ padding: '1.2rem', textAlign: 'left' }}>วันที่แจ้ง</th>
-                                        <th style={{ padding: '1.2rem', textAlign: 'left' }}>จัดการ</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem' }}>สถานะ</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem' }}>รหัส</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem' }}>หมวดหมู่</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem' }}>สาขา</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem' }}>วันที่แจ้ง</th>
+                                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8rem' }}>จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredTickets.map(t => (
                                         <tr key={t.TicketID} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '1.1rem' }}>
-                                                <span className="badge" style={{ background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}50` }}>{translateStatus(t.CurrentStatus)}</span>
+                                            <td style={{ padding: '0.8rem 1rem' }}>
+                                                <span className="badge" style={{ background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}50`, fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>{translateStatus(t.CurrentStatus)}</span>
                                             </td>
-                                            <td style={{ padding: '1.1rem', fontWeight: '700' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
-                                            <td style={{ padding: '1.1rem' }}>{t.Symptom}</td>
-                                            <td style={{ padding: '1.1rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
-                                            <td style={{ padding: '1.1rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
-                                            <td style={{ padding: '1.1rem' }}><button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>จัดการ</button></td>
+                                            <td style={{ padding: '0.8rem 1rem', fontWeight: '700', fontSize: '0.8rem' }}>{t.TicketID.substring(0, 8).toUpperCase()}</td>
+                                            <td style={{ padding: '0.8rem 1rem', fontSize: '0.8rem' }}>{t.Symptom}</td>
+                                            <td style={{ padding: '0.8rem 1rem', fontSize: '0.8rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
+                                            <td style={{ padding: '0.8rem 1rem', fontSize: '0.8rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
+                                            <td style={{ padding: '0.8rem 1rem' }}><button onClick={() => setSelectedTicket(t)} className="btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>จัดการ</button></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -386,33 +397,36 @@ export default function AdminDashboard() {
             </main>
 
             {selectedTicket && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setSelectedTicket(null)}>
-                    <div style={{ width: '100%', maxWidth: '850px', maxHeight: '95vh', background: '#fff', borderRadius: '30px', display: 'flex', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ flex: 1.2, padding: '2rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9' }}>
-                            <h2 style={{ fontSize: '1.6rem', marginBottom: '1rem' }}>{selectedTicket.Symptom}</h2>
-                            <p style={{ color: 'var(--text-muted)' }}>ID: {selectedTicket.TicketID.toUpperCase()}</p>
-                            <p style={{ marginTop: '1rem' }}><b>รายละเอียด:</b> {selectedTicket.Description || '-'}</p>
-                            {selectedTicket.ImageURL && <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '15px', marginTop: '1rem' }} />}
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setSelectedTicket(null)}>
+                    <div style={{ width: '100%', maxWidth: '850px', maxHeight: '90vh', background: '#fff', borderRadius: '20px', display: 'flex', flexWrap: 'wrap', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ flex: '1 1 350px', padding: '1.5rem', overflowY: 'auto', borderRight: '1px solid #f1f5f9', maxHeight: '50vh' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h2 style={{ fontSize: '1.4rem' }}>{selectedTicket.Symptom}</h2>
+                                <button onClick={() => setSelectedTicket(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+                            </div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>ID: {selectedTicket.TicketID.toUpperCase()}</p>
+                            <p style={{ marginTop: '0.8rem', fontSize: '0.9rem' }}><b>รายละเอียด:</b> {selectedTicket.Description || '-'}</p>
+                            {selectedTicket.ImageURL && <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '12px', marginTop: '1rem' }} />}
                         </div>
-                        <div style={{ flex: 0.8, background: '#f8fafc', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div style={{ flex: '1 1 300px', background: '#f8fafc', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>ช่างที่รับผิดชอบ:</label>
-                                <select className="input-glass" value={selectedTech} onChange={e => setSelectedTech(e.target.value)} style={{ background: '#fff' }}>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.85rem' }}>ช่างที่รับผิดชอบ:</label>
+                                <select className="input-glass" value={selectedTech} onChange={e => setSelectedTech(e.target.value)} style={{ background: '#fff', fontSize: '0.85rem' }}>
                                     <option value="">-- ระบุช่าง --</option>
                                     {technicians.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>บันทึก:</label>
-                                <textarea className="input-glass" value={techNote} onChange={e => setTechNote(e.target.value)} style={{ background: '#fff', height: '100px' }} />
+                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.85rem' }}>บันทึก:</label>
+                                <textarea className="input-glass" value={techNote} onChange={e => setTechNote(e.target.value)} style={{ background: '#fff', height: '80px', fontSize: '0.85rem' }} />
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>เปลี่ยนสถานะ:</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                                    {statuses.map(s => <button key={s} onClick={() => setPendingStatus(s)} style={{ padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--accent-primary)', background: pendingStatus === s ? 'var(--accent-primary)' : 'transparent', color: pendingStatus === s ? '#fff' : 'var(--accent-primary)', cursor: 'pointer' }}>{translateStatus(s)}</button>)}
+                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.85rem' }}>เปลี่ยนสถานะ:</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem' }}>
+                                    {statuses.map(s => <button key={s} onClick={() => setPendingStatus(s)} style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--accent-primary)', background: pendingStatus === s ? 'var(--accent-primary)' : 'transparent', color: pendingStatus === s ? '#fff' : 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}>{translateStatus(s)}</button>)}
                                 </div>
                             </div>
-                            <button onClick={handleSaveUpdate} disabled={isUpdating} className="btn-primary" style={{ marginTop: 'auto', width: '100%', padding: '1rem' }}>{isUpdating ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
+                            <button onClick={handleSaveUpdate} disabled={isUpdating} className="btn-primary" style={{ marginTop: '1rem', width: '100%', padding: '0.8rem', fontSize: '0.9rem' }}>{isUpdating ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
                         </div>
                     </div>
                 </div>
