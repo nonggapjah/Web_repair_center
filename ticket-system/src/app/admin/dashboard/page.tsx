@@ -79,8 +79,9 @@ export default function AdminDashboard() {
 
     const filteredTickets = useMemo(() => {
         return tickets.filter(t => {
-            if (startDate && new Date(t.CreatedAt) < new Date(startDate).setHours(0, 0, 0, 0)) return false;
-            if (endDate && new Date(t.CreatedAt) > new Date(endDate).setHours(23, 59, 59, 999)) return false;
+            const ticketTime = new Date(t.CreatedAt).getTime();
+            if (startDate && ticketTime < new Date(startDate).setHours(0, 0, 0, 0)) return false;
+            if (endDate && ticketTime > new Date(endDate).setHours(23, 59, 59, 999)) return false;
             if (filterStatus && t.CurrentStatus !== filterStatus) return false;
             if (filterSymptom && t.Symptom !== filterSymptom) return false;
             if (filterBranch && (t.Branch?.BranchName || t.BranchID) !== filterBranch) return false;
