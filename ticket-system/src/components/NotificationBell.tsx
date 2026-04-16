@@ -28,6 +28,7 @@ export function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
     const popupRef = useRef<HTMLDivElement>(null);
+    const isFirstLoad = useRef(true);
 
     useEffect(() => {
         let prevUnreadCount = 0;
@@ -39,10 +40,11 @@ export function NotificationBell() {
                 setNotifs(data);
 
                 const currentUnread = data.filter((n: any) => !n.IsRead).length;
-                if (currentUnread > prevUnreadCount && prevUnreadCount !== 0) {
+                if (!isFirstLoad.current && currentUnread > prevUnreadCount) {
                     playNotificationSound();
                 }
                 prevUnreadCount = currentUnread;
+                isFirstLoad.current = false;
             }
         };
         init();
