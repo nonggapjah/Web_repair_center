@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 
 interface SignatureModalProps {
@@ -11,6 +11,19 @@ interface SignatureModalProps {
 
 export function SignatureModal({ isOpen, title, onClose, onConfirm }: SignatureModalProps) {
     const sigPad = useRef<SignatureCanvas>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const [canvasWidth, setCanvasWidth] = useState(500);
+
+    useEffect(() => {
+        if (isOpen) {
+            const timer = setTimeout(() => {
+                if (wrapperRef.current) {
+                    setCanvasWidth(wrapperRef.current.clientWidth);
+                }
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -34,11 +47,11 @@ export function SignatureModal({ isOpen, title, onClose, onConfirm }: SignatureM
             <div style={{ background: 'white', padding: '2rem', borderRadius: '15px', width: '90%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
                 <h3 style={{ marginTop: 0, fontSize: '1.25rem', color: '#1e293b', marginBottom: '1rem' }}>{title}</h3>
 
-                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', marginBottom: '1rem' }}>
+                <div ref={wrapperRef} style={{ width: '100%', border: '2px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', marginBottom: '1rem', overflow: 'hidden' }}>
                     <SignatureCanvas
                         ref={sigPad}
                         penColor="black"
-                        canvasProps={{ width: 500, height: 200, className: 'sigCanvas', style: { width: '100%', height: '200px', cursor: 'crosshair', borderRadius: '10px' } }}
+                        canvasProps={{ width: canvasWidth, height: 200, className: 'sigCanvas', style: { display: 'block', cursor: 'crosshair', borderRadius: '10px' } }}
                     />
                 </div>
 
