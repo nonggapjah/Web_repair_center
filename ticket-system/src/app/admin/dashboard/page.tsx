@@ -483,6 +483,19 @@ export default function AdminDashboard() {
                                 {selectedTicket.ImageURL && (
                                     <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '15px', marginTop: '1rem', border: '2px solid #f1f5f9' }} />
                                 )}
+
+                                {selectedTicket.AdminSignature && (
+                                    <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', display: 'block', marginBottom: '0.5rem' }}>ลายเซ็นผู้มอบงาน (Admin)</label>
+                                        <img src={selectedTicket.AdminSignature} alt="Admin Signature" style={{ maxHeight: '80px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+                                    </div>
+                                )}
+                                {selectedTicket.UserSignature && (
+                                    <div style={{ marginTop: '0.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', display: 'block', marginBottom: '0.5rem' }}>ลายเซ็นผู้รับมอบงาน (สาขา)</label>
+                                        <img src={selectedTicket.UserSignature} alt="Branch Signature" style={{ maxHeight: '80px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+                                    </div>
+                                )}
                             </div>
 
                             <hr style={{ margin: '2rem 0', borderColor: '#e2e8f0' }} />
