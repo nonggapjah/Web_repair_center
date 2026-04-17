@@ -45,6 +45,8 @@ model RepairTicket {
   TotalCost     Float?
   CSAT_Score    Int?
   Technician    String?
+  AdminSignature String?
+  UserSignature  String?
   CreatedAt     DateTime        @default(now())
   History       TicketHistory[]
   Comments      TicketComment[]

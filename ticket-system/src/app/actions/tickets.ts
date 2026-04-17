@@ -99,18 +99,26 @@ export async function getAllTickets(_t?: number) {
     });
 }
 
-export async function updateTicketStatus(ticketId: string, status: string, note?: string, technician?: string, actualDate?: string) {
+export async function updateTicketStatus(ticketId: string, status: string, note?: string, technician?: string, actualDate?: string, signatureBase64?: string) {
     try {
         const ticket = await prisma.repairTicket.findUnique({ where: { TicketID: ticketId } });
         if (!ticket) throw new Error("Ticket not found");
 
+        const updateData: any = {
+            CurrentStatus: status,
+            Technician: technician,
+            ActualDate: actualDate ? new Date(actualDate) : undefined
+        };
+
+        if (status === 'Completed' && signatureBase64) {
+            updateData.AdminSignature = signatureBase64;
+        } else if (status === 'Closed' && signatureBase64) {
+            updateData.UserSignature = signatureBase64;
+        }
+
         await prisma.repairTicket.update({
             where: { TicketID: ticketId },
-            data: {
-                CurrentStatus: status,
-                Technician: technician,
-                ActualDate: actualDate ? new Date(actualDate) : undefined
-            }
+            data: updateData
         });
 
         await prisma.ticketHistory.create({

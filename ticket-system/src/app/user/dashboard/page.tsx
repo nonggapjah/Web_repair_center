@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getBranchTickets, updateTicketStatus, addTicketComment } from '@/app/actions/tickets';
 import { getSession, logout } from '@/app/actions/auth';
 import { supabase } from '@/lib/supabase';
+import { SignatureModal } from '@/components/SignatureModal';
 
 export default function UserTicketList() {
     const [tickets, setTickets] = useState<any[]>([]);
@@ -15,6 +16,8 @@ export default function UserTicketList() {
     const [replyMessage, setReplyMessage] = useState('');
     const [replyFile, setReplyFile] = useState<File | null>(null);
     const [isReplying, setIsReplying] = useState(false);
+    const [showSignPad, setShowSignPad] = useState(false);
+    const [submittingTicketId, setSubmittingTicketId] = useState<string | null>(null);
 
     const translateStatus = (status: string) => {
         switch (status) {
@@ -126,19 +129,27 @@ export default function UserTicketList() {
 
     const handleConfirmSuccess = async (ticketId: string) => {
         if (!confirm('ยืนยันว่าการซ่อมเสร็จสิ้นสมบูรณ์และต้องการปิดงานใช่หรือไม่?')) return;
+        setSubmittingTicketId(ticketId);
+        setShowSignPad(true);
+    };
 
-        const result = await updateTicketStatus(ticketId, 'Closed', 'สาขายืนยันปิดงานเรียบร้อย');
+    const submitConfirmSuccess = async (signatureBase64: string) => {
+        if (!submittingTicketId) return;
+
+        const result = await updateTicketStatus(submittingTicketId, 'Closed', 'สาขายืนยันปิดงานเรียบร้อย', undefined, undefined, signatureBase64);
         if (result.success) {
             alert('ปิดงานเรียบร้อยแล้ว');
             if (user) {
                 const updatedTickets = await getBranchTickets(user.branchId, Date.now());
                 setTickets(updatedTickets);
-                const newT = updatedTickets.find(t => t.TicketID === ticketId);
+                const newT = updatedTickets.find(t => t.TicketID === submittingTicketId);
                 setSelectedTicket(newT || null);
             }
         } else {
             alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
         }
+        setShowSignPad(false);
+        setSubmittingTicketId(null);
     };
 
     const handleAddComment = async () => {
@@ -392,6 +403,13 @@ export default function UserTicketList() {
                     </div>
                 </div>
             )}
+
+            <SignatureModal
+                isOpen={showSignPad}
+                title="กรุณาลงลายมือชื่อรับมอบงานซ่อม (สาขา)"
+                onClose={() => { setShowSignPad(false); setSubmittingTicketId(null); }}
+                onConfirm={submitConfirmSuccess}
+            />
         </>
     );
 }

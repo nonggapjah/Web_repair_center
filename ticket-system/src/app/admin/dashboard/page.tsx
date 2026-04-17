@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { getAllTickets, updateTicketStatus, addTicketComment } from '@/app/actions/tickets';
 import { supabase } from '@/lib/supabase';
+import { SignatureModal } from '@/components/SignatureModal';
 
 const statuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed", "Closed"];
 const adminSelectableStatuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed"]; // No 'Closed'
@@ -42,6 +43,7 @@ export default function AdminDashboard() {
     const [actualDate, setActualDate] = useState('');
     const [pendingStatus, setPendingStatus] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [showSignPad, setShowSignPad] = useState(false);
 
     // Timeline/Chat states
     const [replyMessage, setReplyMessage] = useState('');
@@ -135,14 +137,21 @@ export default function AdminDashboard() {
         });
     }, [tickets, startDate, endDate, filterStatus, filterSymptom, filterBranch, filterTechnician, searchQuery]);
 
-    const handleSaveUpdate = async () => {
+    const handleSaveUpdate = async (overrideSignature?: string) => {
         if (!selectedTicket || !pendingStatus) return;
+
+        if (pendingStatus === 'Completed' && !overrideSignature) {
+            setShowSignPad(true);
+            return;
+        }
+
         setIsUpdating(true);
         try {
-            await updateTicketStatus(selectedTicket.TicketID, pendingStatus, techNote, selectedTech, actualDate);
-            const refresh = await getAllTickets();
+            await updateTicketStatus(selectedTicket.TicketID, pendingStatus, techNote, selectedTech, actualDate, overrideSignature);
+            const refresh = await getAllTickets(Date.now());
             setTickets(refresh);
             setSelectedTicket(null);
+            setShowSignPad(false);
             alert('บันทึกสำเร็จ');
         } catch (err) { alert('ผิดพลาด'); } finally { setIsUpdating(false); }
     };
@@ -545,13 +554,20 @@ export default function AdminDashboard() {
                                 <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.3rem' }}>* บันทึกนี้จะลงในประวัติไทม์ไลน์</p>
                             </div>
 
-                            <button onClick={handleSaveUpdate} disabled={isUpdating} style={{ marginTop: 'auto', width: '100%', padding: '1.2rem', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+                            <button onClick={() => handleSaveUpdate()} disabled={isUpdating} style={{ marginTop: 'auto', width: '100%', padding: '1.2rem', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
                                 {isUpdating ? 'กำลังบันทึก...' : '💾 อัปเดตงานแจ้งซ่อม'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            <SignatureModal
+                isOpen={showSignPad}
+                title="กรุณาลงลายมือชื่อรับรองการซ่อมเสร็จสิ้น (Admin)"
+                onClose={() => setShowSignPad(false)}
+                onConfirm={(sig) => handleSaveUpdate(sig)}
+            />
         </div>
     );
 }
