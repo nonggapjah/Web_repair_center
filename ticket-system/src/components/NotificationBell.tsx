@@ -79,8 +79,8 @@ export function NotificationBell() {
 
     const handleClearAll = async () => {
         if (!user) return;
-        await markAllNotificationsRead(user.branchId, user.role);
-        setNotifs(notifs.map(n => ({ ...n, IsRead: true })));
+        await markAllNotificationsRead(user.branchId, user.role); // Server will now DELETE them instead
+        setNotifs([]);
     };
 
     return (
@@ -102,7 +102,7 @@ export function NotificationBell() {
                     <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', position: 'sticky', top: 0, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1e293b', zIndex: 2 }}>
                         <span>การแจ้งเตือน</span>
                         <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                            {unreadCount > 0 && <button onClick={handleClearAll} style={{ fontSize: '0.75rem', color: '#3b82f6', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '800' }}>ล้างทั้งหมด</button>}
+                            {notifs.length > 0 && <button onClick={handleClearAll} style={{ fontSize: '0.75rem', color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '800' }}>ล้างทั้งหมด</button>}
                             <button onClick={() => setIsOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b' }}>×</button>
                         </div>
                     </div>

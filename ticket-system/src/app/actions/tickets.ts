@@ -229,9 +229,8 @@ export async function markNotificationRead(notifId: string) {
 
 export async function markAllNotificationsRead(branchId: string, role: string) {
     try {
-        await prisma.notification.updateMany({
-            where: { TargetRole: role, TargetUser: role === 'Admin' ? null : branchId, IsRead: false },
-            data: { IsRead: true }
+        await prisma.notification.deleteMany({
+            where: { TargetRole: role, TargetUser: role === 'Admin' ? null : branchId }
         });
         return { success: true };
     } catch (err) {
