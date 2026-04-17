@@ -226,3 +226,15 @@ export async function markNotificationRead(notifId: string) {
     revalidatePath('/user/dashboard');
     revalidatePath('/admin/dashboard');
 }
+
+export async function markAllNotificationsRead(branchId: string, role: string) {
+    try {
+        await prisma.notification.updateMany({
+            where: { TargetRole: role, TargetUser: role === 'Admin' ? null : branchId, IsRead: false },
+            data: { IsRead: true }
+        });
+        return { success: true };
+    } catch (err) {
+        return { success: false };
+    }
+}

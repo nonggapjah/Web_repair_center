@@ -145,13 +145,13 @@ export default function AdminDashboard() {
             return;
         }
 
+        setShowSignPad(false);
         setIsUpdating(true);
         try {
             await updateTicketStatus(selectedTicket.TicketID, pendingStatus, techNote, selectedTech, actualDate, overrideSignature);
             const refresh = await getAllTickets(Date.now());
             setTickets(refresh);
             setSelectedTicket(null);
-            setShowSignPad(false);
             alert('บันทึกสำเร็จ');
         } catch (err) { alert('ผิดพลาด'); } finally { setIsUpdating(false); }
     };

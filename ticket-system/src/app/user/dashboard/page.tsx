@@ -135,6 +135,7 @@ export default function UserTicketList() {
 
     const submitConfirmSuccess = async (signatureBase64: string) => {
         if (!submittingTicketId) return;
+        setShowSignPad(false);
 
         const result = await updateTicketStatus(submittingTicketId, 'Closed', 'สาขายืนยันปิดงานเรียบร้อย', undefined, undefined, signatureBase64);
         if (result.success) {
@@ -148,7 +149,6 @@ export default function UserTicketList() {
         } else {
             alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
         }
-        setShowSignPad(false);
         setSubmittingTicketId(null);
     };
 

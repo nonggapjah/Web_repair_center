@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession } from '@/app/actions/auth';
-import { getUserNotifications, markNotificationRead } from '@/app/actions/tickets';
+import { getUserNotifications, markNotificationRead, markAllNotificationsRead } from '@/app/actions/tickets';
 
 const playNotificationSound = () => {
     try {
@@ -77,6 +77,12 @@ export function NotificationBell() {
         }
     };
 
+    const handleClearAll = async () => {
+        if (!user) return;
+        await markAllNotificationsRead(user.branchId, user.role);
+        setNotifs(notifs.map(n => ({ ...n, IsRead: true })));
+    };
+
     return (
         <div style={{ position: 'relative' }} ref={popupRef}>
             <button
@@ -93,9 +99,12 @@ export function NotificationBell() {
 
             {isOpen && (
                 <div style={{ position: 'absolute', right: 0, top: '45px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '15px', width: '320px', maxHeight: '420px', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)', zIndex: 99999 }}>
-                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', position: 'sticky', top: 0, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', color: '#1e293b' }}>
+                    <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', position: 'sticky', top: 0, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1e293b', zIndex: 2 }}>
                         <span>การแจ้งเตือน</span>
-                        <button onClick={() => setIsOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b' }}>×</button>
+                        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                            {unreadCount > 0 && <button onClick={handleClearAll} style={{ fontSize: '0.75rem', color: '#3b82f6', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '800' }}>ล้างทั้งหมด</button>}
+                            <button onClick={() => setIsOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b' }}>×</button>
+                        </div>
                     </div>
                     {notifs.length === 0 ? (
                         <div style={{ padding: '2rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>ไม่มีการแจ้งเตือน</div>
