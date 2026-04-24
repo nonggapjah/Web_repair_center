@@ -46,10 +46,10 @@ export function NavBar() {
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '1600px', margin: '0 auto' }}>
                 <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🏠</span>
+                    <img src="/logo.png" alt="Villa Market Logo" style={{ height: '35px', width: 'auto', marginRight: '0.2rem' }} />
                     <div style={{ lineHeight: '1.1' }}>
-                        <div style={{ fontWeight: '800', fontSize: '0.9rem' }}>ระบบซ่อมบำรุง</div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>Villa Market</div>
+                        <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#1e3a8a' }}>ระบบซ่อมบำรุง</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>Ticket System</div>
                     </div>
                 </Link>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>

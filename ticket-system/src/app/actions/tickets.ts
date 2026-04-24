@@ -116,33 +116,29 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
             updateData.UserSignature = signatureBase64;
         }
 
-        await prisma.repairTicket.update({
-            where: { TicketID: ticketId },
-            data: updateData
-        });
-
-        await prisma.ticketHistory.create({
-            data: {
-                TicketID: ticketId,
-                Status: status,
-                Note: note,
-                UpdatedBy: 'Admin'
-            }
-        });
-
-        // 1. Send LINE Notify (Disabled for now)
-        // await sendLineNotify(`🛠️ อัปเดตงานซ่อม #${ticketId.substring(0, 8).toUpperCase()}\nสาขา: ${ticket.BranchID}\nสถานะใหม่: ${status}\nโน้ต: ${note || '-'}\nช่าง: ${technician || '-'}`);
-
-        // 2. Create In-App Notification for Branch
-        await prisma.notification.create({
-            data: {
-                TargetRole: 'Branch',
-                TargetUser: ticket.BranchID,
-                Title: 'อัปเดตสถานะงานซ่อม',
-                Message: `ใบงาน #${ticketId.substring(0, 8).toUpperCase()} เปลี่ยนสถานะเป็น ${status}`,
-                TicketID: ticketId
-            }
-        });
+        await Promise.all([
+            prisma.repairTicket.update({
+                where: { TicketID: ticketId },
+                data: updateData
+            }),
+            prisma.ticketHistory.create({
+                data: {
+                    TicketID: ticketId,
+                    Status: status,
+                    Note: note,
+                    UpdatedBy: 'Admin'
+                }
+            }),
+            prisma.notification.create({
+                data: {
+                    TargetRole: 'Branch',
+                    TargetUser: ticket.BranchID,
+                    Title: 'อัปเดตสถานะงานซ่อม',
+                    Message: `ใบงาน #${ticketId.substring(0, 8).toUpperCase()} เปลี่ยนสถานะเป็น ${status}`,
+                    TicketID: ticketId
+                }
+            })
+        ]);
 
         revalidatePath('/user/dashboard');
         revalidatePath('/admin/dashboard');

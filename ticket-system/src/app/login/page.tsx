@@ -52,9 +52,9 @@ export default function LoginPage() {
         }}>
             <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '3rem 2rem', textAlign: 'center' }}>
                 <img
-                    src="https://www.villamarket.com/static/media/villa-logo.5d120fb3.png"
+                    src="/logo.png"
                     alt="Villa Market"
-                    style={{ width: '180px', marginBottom: '2rem' }}
+                    style={{ width: '180px', marginBottom: '1.5rem', background: 'white', padding: '1rem', borderRadius: '15px' }}
                 />
 
                 {profile ? (

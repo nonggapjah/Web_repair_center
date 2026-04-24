@@ -149,10 +149,18 @@ export default function AdminDashboard() {
         setIsUpdating(true);
         try {
             await updateTicketStatus(selectedTicket.TicketID, pendingStatus, techNote, selectedTech, actualDate, overrideSignature);
-            const refresh = await getAllTickets(Date.now());
-            setTickets(refresh);
+
+            // Optimistic update
+            setTickets(prev => prev.map(t => t.TicketID === selectedTicket.TicketID ? {
+                ...t,
+                CurrentStatus: pendingStatus,
+                Technician: selectedTech || t.Technician,
+                ActualDate: actualDate ? new Date(actualDate).toISOString() : t.ActualDate,
+                AdminSignature: overrideSignature || t.AdminSignature
+            } : t));
+
             setSelectedTicket(null);
-            alert('บันทึกสำเร็จ');
+            // alert('บันทึกสำเร็จ');
         } catch (err) { alert('ผิดพลาด'); } finally { setIsUpdating(false); }
     };
 

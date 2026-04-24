@@ -137,18 +137,20 @@ export default function UserTicketList() {
         if (!submittingTicketId) return;
         setShowSignPad(false);
 
+        // Optimistic UI update
+        setTickets(prev => prev.map(t => t.TicketID === submittingTicketId ? {
+            ...t,
+            CurrentStatus: 'Closed',
+            UserSignature: signatureBase64
+        } : t));
+        setSelectedTicket(null);
+
+        // Background persist
         const result = await updateTicketStatus(submittingTicketId, 'Closed', 'สาขายืนยันปิดงานเรียบร้อย', undefined, undefined, signatureBase64);
-        if (result.success) {
-            alert('ปิดงานเรียบร้อยแล้ว');
-            if (user) {
-                const updatedTickets = await getBranchTickets(user.branchId, Date.now());
-                setTickets(updatedTickets);
-                const newT = updatedTickets.find(t => t.TicketID === submittingTicketId);
-                setSelectedTicket(newT || null);
-            }
-        } else {
-            alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
+        if (!result.success) {
+            alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ ลองรีเฟรชหน้าต่างครับ');
         }
+
         setSubmittingTicketId(null);
     };
 
