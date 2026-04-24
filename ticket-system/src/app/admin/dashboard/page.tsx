@@ -345,10 +345,12 @@ export default function AdminDashboard() {
                         <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
                             {[
                                 { l: 'รวม', c: filteredTickets.length, cl: '#1e293b' },
-                                { l: 'รอดำเนินการ', c: filteredTickets.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length, cl: '#f59e0b' },
-                                { l: 'กำลังซ่อม', c: filteredTickets.filter(t => ['Repairing', 'On Process'].includes(t.CurrentStatus)).length, cl: '#3b82f6' },
+                                { l: 'แจ้งซ่อมใหม่', c: filteredTickets.filter(t => t.CurrentStatus === 'Open').length, cl: '#3b82f6' },
+                                { l: 'รับเรื่องแล้ว', c: filteredTickets.filter(t => t.CurrentStatus === 'On Process').length, cl: '#8b5cf6' },
+                                { l: 'กำลังเข้าซ่อม', c: filteredTickets.filter(t => t.CurrentStatus === 'Repairing').length, cl: '#f59e0b' },
                                 { l: 'รออะไหล่', c: filteredTickets.filter(t => t.CurrentStatus === 'Waiting Parts').length, cl: '#ef4444' },
-                                { l: 'เสร็จสิ้น', c: filteredTickets.filter(t => t.CurrentStatus === 'Completed').length, cl: '#10b981' }
+                                { l: 'ซ่อมเรียบร้อย', c: filteredTickets.filter(t => t.CurrentStatus === 'Completed').length, cl: '#10b981' },
+                                { l: 'ปิดงานถาวร', c: filteredTickets.filter(t => t.CurrentStatus === 'Closed').length, cl: '#64748b' }
                             ].map((s, i) => (
                                 <div key={i} style={{ padding: '1.2rem', textAlign: 'center', background: '#fff', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                                     <h4 style={{ fontSize: '2rem', fontWeight: '900', color: s.cl }}>{s.c}</h4>
@@ -367,11 +369,13 @@ export default function AdminDashboard() {
                                         <div key={tech} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem 0', borderBottom: '1px solid #f1f5f9' }}>
                                             <span style={{ fontWeight: '800', color: '#1e293b' }}>ช่าง {tech}</span>
                                             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                                <span style={{ background: '#f1f5f9', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>ทั้งหมด {tks.length}</span>
-                                                <span style={{ background: '#fef3c7', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#b45309' }}>รอดำเนินการ {tks.filter(t => ['Open', 'Accepted'].includes(t.CurrentStatus)).length}</span>
-                                                <span style={{ background: '#dbeafe', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>กำลังซ่อม {tks.filter(t => ['On Process', 'Repairing'].includes(t.CurrentStatus)).length}</span>
+                                                <span style={{ background: '#f1f5f9', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>รวม {tks.length}</span>
+                                                <span style={{ background: '#dbeafe', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>ใหม่ {tks.filter(t => t.CurrentStatus === 'Open').length}</span>
+                                                <span style={{ background: '#ede9fe', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#6d28d9' }}>รับเรื่องแล้ว {tks.filter(t => t.CurrentStatus === 'On Process').length}</span>
+                                                <span style={{ background: '#fef3c7', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#b45309' }}>กำลังซ่อม {tks.filter(t => t.CurrentStatus === 'Repairing').length}</span>
                                                 <span style={{ background: '#fee2e2', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#b91c1c' }}>รออะไหล่ {tks.filter(t => t.CurrentStatus === 'Waiting Parts').length}</span>
-                                                <span style={{ background: '#dcfce7', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#15803d' }}>เสร็จสิ้น {tks.filter(t => ['Completed', 'Closed'].includes(t.CurrentStatus)).length}</span>
+                                                <span style={{ background: '#dcfce7', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#15803d' }}>ซ่อมเสร็จ {tks.filter(t => t.CurrentStatus === 'Completed').length}</span>
+                                                <span style={{ background: '#e2e8f0', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', color: '#334155' }}>ปิดงาน {tks.filter(t => t.CurrentStatus === 'Closed').length}</span>
                                             </div>
                                         </div>
                                     );
