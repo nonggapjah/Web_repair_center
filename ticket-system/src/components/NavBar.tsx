@@ -2,10 +2,12 @@
 import Link from 'next/link';
 import { logout } from '@/app/actions/auth';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 import { NotificationBell } from './NotificationBell';
 
 export function NavBar() {
+    const pathname = usePathname();
     const [showHeader, setShowHeader] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -28,6 +30,10 @@ export function NavBar() {
         await logout();
         window.location.href = '/login';
     };
+
+    if (pathname === '/' || pathname === '/login') {
+        return null;
+    }
 
     return (
         <nav className="navbar" style={{
