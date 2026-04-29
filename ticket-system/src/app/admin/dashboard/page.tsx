@@ -214,7 +214,6 @@ export default function AdminDashboard() {
         link.click();
     };
 
-    // Chart Data
     const symptomStats = filteredTickets.reduce((acc: any, t) => { acc[t.Symptom] = (acc[t.Symptom] || 0) + 1; return acc; }, {});
     const sortedSymptoms = Object.entries(symptomStats).sort((a: any, b: any) => b[1] - a[1]);
     const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
@@ -223,6 +222,16 @@ export default function AdminDashboard() {
         const angle = (count / (filteredTickets.length || 1)) * 360;
         const res = `${chartColors[i % chartColors.length]} ${curAngle}deg ${curAngle + angle}deg`;
         curAngle += angle;
+        return res;
+    }).join(', ');
+
+    const statusStats = filteredTickets.reduce((acc: any, t) => { acc[t.CurrentStatus] = (acc[t.CurrentStatus] || 0) + 1; return acc; }, {});
+    const sortedStatuses = Object.entries(statusStats).sort((a: any, b: any) => b[1] - a[1]);
+    let curStatusAngle = 0;
+    const conicGradientStatus = sortedStatuses.map(([status, count]: any) => {
+        const angle = (count / (filteredTickets.length || 1)) * 360;
+        const res = `${statusColor(status)} ${curStatusAngle}deg ${curStatusAngle + angle}deg`;
+        curStatusAngle += angle;
         return res;
     }).join(', ');
 
@@ -392,6 +401,23 @@ export default function AdminDashboard() {
                                             <div key={symp} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: chartColors[i % chartColors.length] }}></span>
                                                 <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '800' }}>{symp}</span>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#1e293b', marginLeft: 'auto', paddingLeft: '1rem' }}>{count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ padding: '2rem', borderRadius: '24px', background: '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <h3 style={{ marginBottom: '1.5rem', width: '100%', color: '#1e293b' }}>📈 สัดส่วนสถานะการซ่อม</h3>
+                                <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    <div style={{ width: '200px', height: '200px', borderRadius: '50%', background: filteredTickets.length > 0 ? `conic-gradient(${conicGradientStatus})` : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ width: '120px', height: '120px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#64748b', fontSize: '1.2rem' }}>{filteredTickets.length}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', minWidth: '150px' }}>
+                                        {sortedStatuses.map(([status, count]: any) => (
+                                            <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: statusColor(status) }}></span>
+                                                <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '800' }}>{translateStatus(status)}</span>
                                                 <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#1e293b', marginLeft: 'auto', paddingLeft: '1rem' }}>{count}</span>
                                             </div>
                                         ))}
