@@ -95,11 +95,11 @@ export default function LoginPage() {
 
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                     <div style={{ textAlign: 'left' }}>
-                        <label style={{ color: '#1e3a8a', fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', fontWeight: 'bold' }}>ชื่อผู้ใช้งาน (รหัสสาขา / admin)</label>
+                        <label style={{ color: '#1e3a8a', fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem', fontWeight: 'bold' }}>ชื่อผู้ใช้งาน</label>
                         <input
                             type="text"
                             className="input-glass"
-                            placeholder="เช่น 1024 หรือ admin"
+                            placeholder="ระบุชื่อผู้ใช้งาน"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             style={{ background: '#fff', color: '#0f172a', border: '1px solid #cbd5e1', fontWeight: 'bold' }}
