@@ -4,6 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { createTicket } from '@/app/actions/tickets';
 import { supabase } from '@/lib/supabase';
 import { getSession } from '@/app/actions/auth';
+import Link from 'next/link';
+import { Suspense } from 'react';
 
 const PRODUCT_OPTIONS: Record<string, string[]> = {
     "เครื่องใช้ไฟฟ้า": ["เครื่องพิมพ์ใบเสร็จ", "เครื่องสแกนบาร์โค้ด", "เครื่องรูดบัตร", "พัดลม", "ไมโครเวฟ", "กาน้ำร้อน", "อื่นๆ"],
