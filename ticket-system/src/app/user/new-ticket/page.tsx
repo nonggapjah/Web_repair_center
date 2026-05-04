@@ -3,16 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createTicket } from '@/app/actions/tickets';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
-import { Suspense } from 'react';
-
-const BRANCH_MAP: Record<string, string> = {
-    "1000": "SUKHUMVIT 33",
-    "1003": "NICHADA",
-    "1005": "SUKHUMVIT 49",
-    "1024": "SAMMAKORN",
-    "1030": "K-VILLAGE"
-};
+import { getSession } from '@/app/actions/auth';
 
 const PRODUCT_OPTIONS: Record<string, string[]> = {
     "เครื่องใช้ไฟฟ้า": ["เครื่องพิมพ์ใบเสร็จ", "เครื่องสแกนบาร์โค้ด", "เครื่องรูดบัตร", "พัดลม", "ไมโครเวฟ", "กาน้ำร้อน", "อื่นๆ"],
@@ -29,16 +20,21 @@ function NewTicketForm() {
         product: '',
         symptom: '',
         description: '',
-        branchId: '1024',
+        branchId: '',
         requestDate: ''
     });
+    const [branchName, setBranchName] = useState('');
     const [otherProductName, setOtherProductName] = useState('');
 
     useEffect(() => {
-        const queryBranch = searchParams.get('branchId');
-        const storedBranch = localStorage.getItem('userBranchId');
-        const finalBranch = queryBranch || storedBranch || '1024';
-        setFormData(prev => ({ ...prev, branchId: finalBranch }));
+        const init = async () => {
+            const session = await getSession();
+            if (session) {
+                setFormData(prev => ({ ...prev, branchId: session.branchId }));
+                setBranchName(session.branchName);
+            }
+        };
+        init();
     }, [searchParams]);
 
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -138,7 +134,7 @@ function NewTicketForm() {
                     <span>← กลับ</span>
                 </Link>
                 <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem' }}>ส่งคำขอแจ้งซ่อม</h1>
-                <p style={{ color: 'var(--text-muted)' }}>พนักงานสาขา {formData.branchId} ({BRANCH_MAP[formData.branchId] || 'Unknown Branch'})</p>
+                <p style={{ color: 'var(--text-muted)' }}>พนักงานสาขา {formData.branchId} ({branchName || '...' })</p>
             </div>
 
             <form onSubmit={handleSubmit} className="glass-panel" style={{ padding: '2.5rem' }}>
@@ -148,7 +144,7 @@ function NewTicketForm() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>สาขาที่แจ้ง</label>
-                        <input type="text" className="input-glass" value={`${formData.branchId} - ${BRANCH_MAP[formData.branchId] || 'Other Branch'}`} disabled style={{ opacity: 0.7 }} />
+                        <input type="text" className="input-glass" value={`${formData.branchId} - ${branchName || 'กำลังโหลด...'}`} disabled style={{ opacity: 0.7 }} />
                     </div>
 
                     <div>
