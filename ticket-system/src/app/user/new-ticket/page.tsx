@@ -68,6 +68,36 @@ function NewTicketForm() {
             return;
         }
 
+        if (!formData.product) {
+            setError('กรุณาระบุชนิดอุปกรณ์ที่มีปัญหา');
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (formData.product === 'อื่นๆ' && !otherProductName) {
+            setError('กรุณาระบุชื่ออุปกรณ์ที่ต้องการแจ้งซ่อม');
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!formData.description) {
+            setError('กรุณาระบุรายละเอียดปัญหา');
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!formData.requestDate) {
+            setError('กรุณาระบุวันที่ต้องการให้เข้างาน');
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!selectedFile) {
+            setError('กรุณาแนบรูปภาพหลักฐาน');
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
             let publicUrl = '';
 
@@ -193,12 +223,12 @@ function NewTicketForm() {
                     )}
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รายละเอียดปัญหา</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รายละเอียดปัญหา <span style={{ color: 'red' }}>*</span></label>
                         <textarea className="input-glass" style={{ minHeight: '120px' }} placeholder="ระบุอาการเสียโดยละเอียด..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>วันที่ต้องการให้เข้างาน (สาขาระบุ)</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>วันที่ต้องการให้เข้างาน (สาขาระบุ) <span style={{ color: 'red' }}>*</span></label>
                         <input
                             type="date"
                             className="input-glass"
@@ -208,7 +238,7 @@ function NewTicketForm() {
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รูปภาพหลักฐาน</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รูปภาพหลักฐาน <span style={{ color: 'red' }}>*</span></label>
                         <div className="input-glass" style={{ minHeight: '150px', borderStyle: 'dashed', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => document.getElementById('fileUpload')?.click()}>
                             <input type="file" id="fileUpload" style={{ display: 'none' }} accept="image/*" onChange={handleImageChange} />
                             {imagePreview ? (
