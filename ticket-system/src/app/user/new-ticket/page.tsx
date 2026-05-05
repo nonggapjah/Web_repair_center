@@ -39,21 +39,24 @@ function NewTicketForm() {
         init();
     }, [searchParams]);
 
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [filePreviews, setFilePreviews] = useState<{ url: string, type: string }[]>([]);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setSelectedFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setSelectedFiles(prev => [...prev, ...files]);
+            
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setFilePreviews(prev => [...prev, { url: reader.result as string, type: file.type }]);
+                };
+                reader.readAsDataURL(file);
+            });
         }
     };
 
@@ -92,23 +95,23 @@ function NewTicketForm() {
             return;
         }
 
-        if (!selectedFile) {
-            setError('กรุณาแนบรูปภาพหลักฐาน');
+        if (selectedFiles.length === 0) {
+            setError('กรุณาแนบรูปภาพหรือวิดิโอหลักฐาน');
             setIsSubmitting(false);
             return;
         }
 
         try {
-            let publicUrl = '';
+            let publicUrls: string[] = [];
 
-            if (selectedFile) {
-                const fileExt = selectedFile.name.split('.').pop();
+            for (const file of selectedFiles) {
+                const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
                 const filePath = `${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
                     .from('tickets')
-                    .upload(filePath, selectedFile);
+                    .upload(filePath, file);
 
                 if (uploadError) {
                     throw new Error('Upload failed: ' + uploadError.message);
@@ -118,14 +121,14 @@ function NewTicketForm() {
                     .from('tickets')
                     .getPublicUrl(filePath);
 
-                publicUrl = data.publicUrl;
+                publicUrls.push(data.publicUrl);
             }
 
             // Since product is mandatory in DB but removed from UI, we send an empty string or generic value
             const finalData = {
                 ...formData,
                 product: formData.product === 'อื่นๆ' ? `อื่นๆ: ${otherProductName}` : formData.product,
-                imageURL: publicUrl
+                imageURL: publicUrls.join(',')
             };
 
             const result = await createTicket(finalData);
@@ -238,14 +241,28 @@ function NewTicketForm() {
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รูปภาพหลักฐาน <span style={{ color: 'red' }}>*</span></label>
-                        <div className="input-glass" style={{ minHeight: '150px', borderStyle: 'dashed', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => document.getElementById('fileUpload')?.click()}>
-                            <input type="file" id="fileUpload" style={{ display: 'none' }} accept="image/*" onChange={handleImageChange} />
-                            {imagePreview ? (
-                                <img src={imagePreview} style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }} alt="Preview" />
-                            ) : (
-                                <span>คลิกเพื่อแนบบรูปภาพ</span>
-                            )}
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>รูปภาพ/วิดิโอหลักฐาน <span style={{ color: 'red' }}>*</span></label>
+                        <div className="input-glass" style={{ minHeight: '150px', borderStyle: 'dashed', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', width: '100%', marginBottom: filePreviews.length > 0 ? '1rem' : '0' }}>
+                                {filePreviews.map((preview, idx) => (
+                                    <div key={idx} style={{ position: 'relative', width: '100px', height: '100px' }}>
+                                        {preview.type.startsWith('video/') ? (
+                                            <video src={preview.url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                                        ) : (
+                                            <img src={preview.url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} alt={`Preview ${idx}`} />
+                                        )}
+                                        <button type="button" onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFilePreviews(prev => prev.filter((_, i) => i !== idx));
+                                            setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
+                                        }} style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '10px' }}>X</button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button type="button" onClick={() => document.getElementById('fileUpload')?.click()} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                                + เพิ่มรูปภาพหรือวิดิโอ
+                            </button>
+                            <input type="file" id="fileUpload" style={{ display: 'none' }} accept="image/*,video/*" multiple onChange={handleImageChange} />
                         </div>
                     </div>
 

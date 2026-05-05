@@ -348,9 +348,18 @@ export default function UserTicketList() {
                         <div style={{ marginTop: '1rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
                             <p style={{ fontWeight: '900', marginBottom: '0.5rem', color: '#475569' }}>รายละเอียดจากผู้แจ้ง:</p>
                             <p style={{ color: '#1e293b', lineHeight: '1.6' }}>{selectedTicket.Description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
-                            {selectedTicket.ImageURL && (
-                                <img src={selectedTicket.ImageURL} alt="Evidence" style={{ width: '100%', borderRadius: '15px', marginTop: '1rem', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(selectedTicket.ImageURL, '_blank')} />
-                            )}
+                            {selectedTicket.ImageURL && selectedTicket.ImageURL.split(',').map((url: string, idx: number) => {
+                                const isVideo = url.match(/\.(mp4|webm|mov|ogg)$/i);
+                                return (
+                                    <div key={idx} style={{ marginTop: '1rem' }}>
+                                        {isVideo ? (
+                                            <video src={url} controls style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9' }} />
+                                        ) : (
+                                            <img src={url} alt={`Evidence ${idx}`} style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                                        )}
+                                    </div>
+                                );
+                            })}
 
                             {selectedTicket.AdminSignature && (
                                 <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
