@@ -390,7 +390,11 @@ export default function UserTicketList() {
                                         <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#fff', borderRadius: '6px', fontWeight: '800', border: '1px solid #cbd5e1', marginRight: '0.5rem' }}>เปลี่ยนสถานะ: {translateStatus(item.status)}</span>
                                     )}
                                     {item.msg && <p style={{ color: '#1e293b', fontSize: '0.95rem', marginTop: '0.5rem' }}>{item.msg}</p>}
-                                    {item.img && <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(item.img, '_blank')} />}
+                                    {item.img && (item.img.match(/\.(mp4|webm|mov|ogg)$/i) ? (
+                                        <video src={item.img} controls style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1' }} />
+                                    ) : (
+                                        <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(item.img, '_blank')} />
+                                    ))}
                                 </div>
                             )) : (
                                 <p style={{ color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>ยังไม่มีการพูดคุยหรือการอัปเดต</p>
@@ -402,8 +406,8 @@ export default function UserTicketList() {
                             <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>ตอบกลับแอดมิน</label>
                             <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับ..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '1rem', fontFamily: 'inherit' }} />
                             <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <input type="file" accept="image/*" id="replyImgUser" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
-                                <label htmlFor="replyImgUser" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📷 ' + replyFile.name : '📷 แนบรูปภาพ'}</label>
+                                <input type="file" accept="image/*,video/*" id="replyImgUser" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
+                                <label htmlFor="replyImgUser" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📎 ' + replyFile.name : '📎 แนบรูปภาพ/วิดีโอ'}</label>
                                 {replyFile && <button onClick={() => setReplyFile(null)} style={{ border: 'none', background: 'transparent', color: 'red', fontWeight: '800', cursor: 'pointer' }}>✕</button>}
                                 <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && !replyFile)} style={{ marginLeft: 'auto', background: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
                             </div>

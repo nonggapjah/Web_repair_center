@@ -442,6 +442,7 @@ export default function AdminDashboard() {
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>สาขา</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>ช่าง</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>วันที่แจ้ง</th>
+                                    <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>วันที่สาขาขอเข้า</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>วันที่เข้าจริง</th>
                                     <th style={{ padding: '1.2rem' }}></th>
                                 </tr>
@@ -457,6 +458,7 @@ export default function AdminDashboard() {
                                         <td style={{ padding: '1rem 1.2rem', color: '#475569', fontSize: '0.9rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '700' }}>{t.Technician || "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontSize: '0.9rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
+                                        <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#4338ca', fontSize: '0.9rem' }}>{t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#3b82f6', fontSize: '0.9rem' }}>{t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem' }}>
                                             <button onClick={(e) => { e.stopPropagation(); setSelectedTicket(t); }} style={{ background: '#1e293b', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '10px', cursor: 'pointer', fontWeight: '800' }}>จัดการ</button>
@@ -513,6 +515,7 @@ export default function AdminDashboard() {
                             <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                                 <span style={{ padding: '0.4rem 0.8rem', background: '#e2e8f0', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800' }}>#{selectedTicket.TicketID.substring(0, 8).toUpperCase()}</span>
                                 <span style={{ display: 'inline-block', whiteSpace: 'nowrap', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(selectedTicket.CurrentStatus) + '20', color: statusColor(selectedTicket.CurrentStatus) }}>{translateStatus(selectedTicket.CurrentStatus)}</span>
+                                <span style={{ padding: '0.4rem 0.8rem', background: '#e0e7ff', color: '#4338ca', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800' }}>📅 วันที่สาขาขอเข้า: {selectedTicket.RequestDate ? new Date(selectedTicket.RequestDate).toLocaleDateString('th-TH') : 'ไม่ได้ระบุ'}</span>
                             </div>
 
                             <div style={{ marginTop: '1rem', background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
@@ -560,7 +563,11 @@ export default function AdminDashboard() {
                                             <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#fff', borderRadius: '6px', fontWeight: '800', border: '1px solid #cbd5e1', marginRight: '0.5rem' }}>เปลี่ยนสถานะ: {translateStatus(item.status)}</span>
                                         )}
                                         {item.msg && <p style={{ color: '#1e293b', fontSize: '0.95rem', marginTop: '0.5rem' }}>{item.msg}</p>}
-                                        {item.img && <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1' }} />}
+                                        {item.img && (item.img.match(/\.(mp4|webm|mov|ogg)$/i) ? (
+                                            <video src={item.img} controls style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1' }} />
+                                        ) : (
+                                            <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(item.img, '_blank')} />
+                                        ))}
                                     </div>
                                 )) : (
                                     <p style={{ color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>ยังไม่มีการพูดคุยหรือการอัปเดต</p>
@@ -572,8 +579,8 @@ export default function AdminDashboard() {
                                 <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>ส่งข้อความ / ตอบกลับ</label>
                                 <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับสาขา..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '1rem' }} />
                                 <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                                    <input type="file" accept="image/*" id="replyImg" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
-                                    <label htmlFor="replyImg" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📷 ' + replyFile.name : '📷 แนบรูปภาพ'}</label>
+                                    <input type="file" accept="image/*,video/*" id="replyImg" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
+                                    <label htmlFor="replyImg" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📎 ' + replyFile.name : '📎 แนบรูปภาพ/วิดีโอ'}</label>
                                     {replyFile && <button onClick={() => setReplyFile(null)} style={{ border: 'none', background: 'transparent', color: 'red', fontWeight: '800', cursor: 'pointer' }}>✕</button>}
                                     <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && !replyFile)} style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
                                 </div>
