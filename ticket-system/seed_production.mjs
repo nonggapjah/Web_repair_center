@@ -4,9 +4,11 @@ const prisma = new PrismaClient();
 
 const branches = [
   { code: '1000', telex: 'vl1000', name: 'SUKHUMVIT 33' },
+  { code: '1001', telex: 'vl1001', name: 'PHAHOLYOTHIN' },
+  { code: '1002', telex: 'vl1002', name: 'OFFICE' },
   { code: '1003', telex: 'vl1003', name: 'NICHADA' },
   { code: '1005', telex: 'vl1005', name: 'SUKHUMVIT 49' },
-  { code: '1006', telex: 'vl1009', name: 'PLOENCHIT' },
+  { code: '1006', telex: 'vl1006', name: 'PLOENCHIT' },
   { code: '1007', telex: 'vl1007', name: 'SILOM' },
   { code: '1011', telex: 'vl1011', name: 'THONGLOR' },
   { code: '1014', telex: 'vl1014', name: 'AREE' },
