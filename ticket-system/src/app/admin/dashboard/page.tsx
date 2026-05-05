@@ -47,7 +47,7 @@ export default function AdminDashboard() {
 
     // Timeline/Chat states
     const [replyMessage, setReplyMessage] = useState('');
-    const [replyFile, setReplyFile] = useState<File | null>(null);
+    const [replyFiles, setReplyFiles] = useState<File[]>([]);
     const [isReplying, setIsReplying] = useState(false);
 
     // Filters
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
             setPendingStatus(selectedTicket.CurrentStatus);
         } else {
             setReplyMessage('');
-            setReplyFile(null);
+            setReplyFiles([]);
         }
     }, [selectedTicket]);
 
@@ -165,21 +165,22 @@ export default function AdminDashboard() {
     };
 
     const handleAddComment = async () => {
-        if (!replyMessage && !replyFile) return;
+        if (!replyMessage && replyFiles.length === 0) return;
         setIsReplying(true);
         try {
-            let publicUrl = '';
-            if (replyFile) {
-                const fileExt = replyFile.name.split('.').pop();
+            let publicUrls: string[] = [];
+            for (const file of replyFiles) {
+                const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const { error: uploadError } = await supabase.storage.from('tickets').upload(fileName, replyFile);
+                const { error: uploadError } = await supabase.storage.from('tickets').upload(fileName, file);
                 if (uploadError) throw new Error('Upload failed');
                 const { data } = supabase.storage.from('tickets').getPublicUrl(fileName);
-                publicUrl = data.publicUrl;
+                publicUrls.push(data.publicUrl);
             }
-            await addTicketComment(selectedTicket.TicketID, replyMessage, publicUrl);
+            const finalImageUrl = publicUrls.join(',');
+            await addTicketComment(selectedTicket.TicketID, replyMessage, finalImageUrl);
             setReplyMessage('');
-            setReplyFile(null);
+            setReplyFiles([]);
 
             const updatedTickets = await getAllTickets(Date.now());
             setTickets(updatedTickets);
@@ -563,11 +564,18 @@ export default function AdminDashboard() {
                                             <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: '#fff', borderRadius: '6px', fontWeight: '800', border: '1px solid #cbd5e1', marginRight: '0.5rem' }}>เปลี่ยนสถานะ: {translateStatus(item.status)}</span>
                                         )}
                                         {item.msg && <p style={{ color: '#1e293b', fontSize: '0.95rem', marginTop: '0.5rem' }}>{item.msg}</p>}
-                                        {item.img && (item.img.match(/\.(mp4|webm|mov|ogg)$/i) ? (
-                                            <video src={item.img} controls style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1' }} />
-                                        ) : (
-                                            <img src={item.img} style={{ maxWidth: '200px', borderRadius: '10px', marginTop: '0.5rem', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(item.img, '_blank')} />
-                                        ))}
+                                        {item.img && (
+                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                                                {item.img.split(',').map((url: string, idx: number) => {
+                                                    const isVideo = url.match(/\.(mp4|webm|mov|ogg)$/i);
+                                                    return isVideo ? (
+                                                        <video key={idx} src={url} controls style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                                                    ) : (
+                                                        <img key={idx} src={url} style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 )) : (
                                     <p style={{ color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>ยังไม่มีการพูดคุยหรือการอัปเดต</p>
@@ -578,11 +586,20 @@ export default function AdminDashboard() {
                             <div className="no-print" style={{ background: '#fff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                                 <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>ส่งข้อความ / ตอบกลับ</label>
                                 <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับสาขา..." style={{ width: '100%', height: '80px', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', resize: 'none', marginBottom: '1rem' }} />
-                                <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                                    <input type="file" accept="image/*,video/*" id="replyImg" style={{ display: 'none' }} onChange={e => setReplyFile(e.target.files?.[0] || null)} />
-                                    <label htmlFor="replyImg" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>{replyFile ? '📎 ' + replyFile.name : '📎 แนบรูปภาพ/วิดีโอ'}</label>
-                                    {replyFile && <button onClick={() => setReplyFile(null)} style={{ border: 'none', background: 'transparent', color: 'red', fontWeight: '800', cursor: 'pointer' }}>✕</button>}
-                                    <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && !replyFile)} style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        {replyFiles.map((file, idx) => (
+                                            <div key={idx} style={{ padding: '0.4rem 0.8rem', background: '#f1f5f9', borderRadius: '8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                📎 {file.name}
+                                                <button onClick={() => setReplyFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: 'none', background: 'transparent', color: 'red', fontWeight: '800', cursor: 'pointer', padding: '0' }}>✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                                        <input type="file" accept="image/*,video/*" multiple id="replyImg" style={{ display: 'none' }} onChange={e => { if (e.target.files) setReplyFiles(prev => [...prev, ...Array.from(e.target.files!)]) }} />
+                                        <label htmlFor="replyImg" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>📎 แนบรูปภาพ/วิดีโอ</label>
+                                        <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && replyFiles.length === 0)} style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
