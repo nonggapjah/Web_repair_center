@@ -351,10 +351,16 @@ export default function UserTicketList() {
                             <p style={{ color: '#1e293b', lineHeight: '1.6' }}>{selectedTicket.Description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
                             {selectedTicket.ImageURL && selectedTicket.ImageURL.split(',').map((url: string, idx: number) => {
                                 const isVideo = url.match(/\.(mp4|webm|mov|ogg)$/i);
+                                const isHeic = url.match(/\.(heic|heif)$/i);
                                 return (
                                     <div key={idx} style={{ marginTop: '1rem' }}>
                                         {isVideo ? (
                                             <video src={url} controls style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9' }} />
+                                        ) : isHeic ? (
+                                            <div style={{ padding: '1rem', background: '#f1f5f9', borderRadius: '15px', border: '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '800' }}>🖼️ รูปภาพ (HEIC จาก iPhone)</span>
+                                                <button onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>ดาวน์โหลด / เปิดดู</button>
+                                            </div>
                                         ) : (
                                             <img src={url} alt={`Evidence ${idx}`} style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                         )}
@@ -395,8 +401,11 @@ export default function UserTicketList() {
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                                             {item.img.split(',').map((url: string, idx: number) => {
                                                 const isVideo = url.match(/\.(mp4|webm|mov|ogg)$/i);
+                                                const isHeic = url.match(/\.(heic|heif)$/i);
                                                 return isVideo ? (
                                                     <video key={idx} src={url} controls style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                                                ) : isHeic ? (
+                                                    <button key={idx} onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
                                                 ) : (
                                                     <img key={idx} src={url} style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                                 );
