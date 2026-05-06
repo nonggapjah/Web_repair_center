@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession } from '@/app/actions/auth';
-import { getUserNotifications, markNotificationRead, markAllNotificationsRead } from '@/app/actions/tickets';
+import { getUserNotifications, markNotificationRead, markAllNotificationsRead, markAllNotificationsAsViewed } from '@/app/actions/tickets';
 
 const playNotificationSound = () => {
     try {
@@ -86,7 +86,15 @@ export function NotificationBell() {
     return (
         <div style={{ position: 'relative' }} ref={popupRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    const nextIsOpen = !isOpen;
+                    setIsOpen(nextIsOpen);
+                    if (nextIsOpen && unreadCount > 0 && user) {
+                        // Mark all as viewed optimistically
+                        setNotifs(notifs.map(n => ({ ...n, IsRead: true })));
+                        markAllNotificationsAsViewed(user.branchId, user.role).catch(console.error);
+                    }
+                }}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', fontSize: '1.4rem', padding: '0.4rem', display: 'flex', alignItems: 'center' }}
             >
                 🔔

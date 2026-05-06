@@ -214,6 +214,19 @@ export async function markNotificationRead(notifId: string) {
     });
 }
 
+export async function markAllNotificationsAsViewed(branchId: string, role: string) {
+    try {
+        const dbRole = role === 'Admin' ? 'Admin' : 'Branch';
+        await prisma.notification.updateMany({
+            where: { TargetRole: dbRole, TargetUser: dbRole === 'Admin' ? null : branchId, IsRead: false },
+            data: { IsRead: true }
+        });
+        return { success: true };
+    } catch (err) {
+        return { success: false };
+    }
+}
+
 export async function markAllNotificationsRead(branchId: string, role: string) {
     try {
         const dbRole = role === 'Admin' ? 'Admin' : 'Branch';
