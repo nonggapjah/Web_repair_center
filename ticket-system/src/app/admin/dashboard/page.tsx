@@ -37,7 +37,7 @@ const statusColor = (status: string) => {
 export default function AdminDashboard() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'overview'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'overview'>('overview');
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
     const [selectedTech, setSelectedTech] = useState('');
@@ -373,8 +373,8 @@ export default function AdminDashboard() {
                     <div className="header-actions">
                         <button onClick={handleExport} style={{ padding: '0.6rem 1.2rem', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: '700' }}>📥 Export</button>
                         <div style={{ background: '#e2e8f0', padding: '0.3rem', borderRadius: '12px', display: 'flex', gap: '0.2rem' }}>
-                            {['overview', 'kanban', 'list'].map((m: any) => (
-                                <button key={m} onClick={() => setViewMode(m)} style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '10px', border: 'none', background: viewMode === m ? '#1e293b' : 'transparent', color: viewMode === m ? '#fff' : '#475569', fontWeight: '700', cursor: 'pointer' }}>{m === 'overview' ? 'สรุป' : m === 'kanban' ? 'บอร์ด' : 'ตาราง'}</button>
+                            {['overview', 'list'].map((m: any) => (
+                                <button key={m} onClick={() => setViewMode(m)} style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '10px', border: 'none', background: viewMode === m ? '#1e293b' : 'transparent', color: viewMode === m ? '#fff' : '#475569', fontWeight: '700', cursor: 'pointer' }}>{m === 'overview' ? 'สรุป' : 'ตาราง'}</button>
                             ))}
                         </div>
                     </div>
@@ -578,28 +578,6 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {viewMode === 'kanban' && (
-                    <DragDropContext onDragEnd={() => { }}>
-                        <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '1rem' }}>
-                            {statuses.map(s => (
-                                <div key={s} style={{ minWidth: '300px', flex: 1, background: '#f1f5f9', borderRadius: '20px', padding: '1rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                        <h4 style={{ fontWeight: '900', color: '#1e293b' }}>{translateStatus(s)}</h4>
-                                        <span style={{ background: '#fff', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.85rem', fontWeight: '800' }}>{filteredTickets.filter(t => t.CurrentStatus === s).length}</span>
-                                    </div>
-                                    <div style={{ minHeight: '500px' }}>
-                                        {filteredTickets.filter(t => t.CurrentStatus === s).map(t => (
-                                            <div key={t.TicketID} onClick={() => setSelectedTicket(t)} style={{ background: '#fff', padding: '1.2rem', borderRadius: '15px', marginBottom: '0.8rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                                <div style={{ fontSize: '0.75rem', fontWeight: '900', color: '#6366f1' }}>#{t.TicketID.substring(0, 8).toUpperCase()}</div>
-                                                <div style={{ fontWeight: '800', margin: '0.4rem 0', color: '#1e293b' }}>{t.Product || 'ไม่ระบุอุปกรณ์'}</div>
-                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{t.Branch?.BranchName || t.BranchID}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </DragDropContext>
                 )}
             </main>
 
