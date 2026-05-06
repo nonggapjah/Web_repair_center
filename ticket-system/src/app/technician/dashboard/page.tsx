@@ -67,6 +67,23 @@ export default function TechnicianTicketList() {
         return null; // None
     };
 
+    const getLastUpdateInfo = (ticket: any) => {
+        const history = ticket.History?.[0];
+        const comment = ticket.Comments?.[0];
+
+        let last: { date: Date, msg: string } | null = null;
+        if (history && comment) {
+            last = new Date(history.Timestamp) > new Date(comment.Timestamp) 
+                ? { date: new Date(history.Timestamp), msg: history.Note || `อัปเดตสถานะ: ${translateStatus(history.Status)}` } 
+                : { date: new Date(comment.Timestamp), msg: comment.Message || 'แนบรูปภาพ' };
+        } else if (history) {
+            last = { date: new Date(history.Timestamp), msg: history.Note || `อัปเดตสถานะ: ${translateStatus(history.Status)}` };
+        } else if (comment) {
+            last = { date: new Date(comment.Timestamp), msg: comment.Message || 'แนบรูปภาพ' };
+        }
+        return last;
+    };
+
     const fetchTickets = async (technicianName: string, isInitial = false) => {
         if (isInitial) setIsLoading(true);
         try {
@@ -269,6 +286,8 @@ export default function TechnicianTicketList() {
                                         <th style={{ padding: '1.2rem', color: '#475569' }}>หมวดหมู่</th>
                                         <th style={{ padding: '1.2rem', color: '#475569' }}>อุปกรณ์</th>
                                         <th style={{ padding: '1.2rem', color: '#475569' }}>สถานะ</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569' }}>อัปเดตล่าสุด</th>
+                                        <th style={{ padding: '1.2rem', color: '#475569', width: '200px' }}>ข้อความล่าสุด</th>
                                         <th style={{ padding: '1.2rem', color: '#475569' }}>วันที่รับมอบหมาย</th>
                                     </tr>
                                 </thead>
@@ -296,6 +315,12 @@ export default function TechnicianTicketList() {
                                                             color: getSLAColor(ticket) ? '#fff' : statusColor(ticket.CurrentStatus),
                                                             border: getSLAColor(ticket) ? 'none' : `1px solid ${statusColor(ticket.CurrentStatus)}30`
                                                         }}>{translateStatus(ticket.CurrentStatus)}</span>
+                                                    </td>
+                                                    <td style={{ padding: '1.1rem', fontSize: '0.85rem', color: '#64748b' }}>
+                                                        {getLastUpdateInfo(ticket) ? getLastUpdateInfo(ticket)?.date.toLocaleString('th-TH', { day: 'numeric', month: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : "-"}
+                                                    </td>
+                                                    <td style={{ padding: '1.1rem', fontSize: '0.85rem', color: '#475569', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {getLastUpdateInfo(ticket)?.msg || "-"}
                                                     </td>
                                                     <td style={{ padding: '1.1rem' }}>{new Date(ticket.CreatedAt).toLocaleDateString('th-TH')}</td>
                                                 </tr>

@@ -78,6 +78,23 @@ export default function AdminDashboard() {
         return null; // None
     };
 
+    const getLastUpdateInfo = (ticket: any) => {
+        const history = ticket.History?.[0];
+        const comment = ticket.Comments?.[0];
+
+        let last: { date: Date, msg: string } | null = null;
+        if (history && comment) {
+            last = new Date(history.Timestamp) > new Date(comment.Timestamp) 
+                ? { date: new Date(history.Timestamp), msg: history.Note || `อัปเดตสถานะ: ${translateStatus(history.Status)}` } 
+                : { date: new Date(comment.Timestamp), msg: comment.Message || 'แนบรูปภาพ' };
+        } else if (history) {
+            last = { date: new Date(history.Timestamp), msg: history.Note || `อัปเดตสถานะ: ${translateStatus(history.Status)}` };
+        } else if (comment) {
+            last = { date: new Date(comment.Timestamp), msg: comment.Message || 'แนบรูปภาพ' };
+        }
+        return last;
+    };
+
     const fetchTickets = async (isInitial = false) => {
         if (isInitial) setIsLoading(true);
         try {
@@ -514,6 +531,8 @@ export default function AdminDashboard() {
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>หมวดหมู่</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>สาขา</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>ช่าง</th>
+                                    <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>อัปเดตล่าสุด</th>
+                                    <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569', width: '250px' }}>ข้อความล่าสุด</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>วันที่แจ้ง</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>วันที่สาขาขอเข้า</th>
                                     <th style={{ padding: '1.2rem', textAlign: 'left', fontWeight: '900', color: '#475569' }}>วันที่เข้าจริง</th>
@@ -540,6 +559,12 @@ export default function AdminDashboard() {
                                         <td style={{ padding: '1rem 1.2rem' }}>{t.Symptom}</td>
                                         <td style={{ padding: '1rem 1.2rem', color: '#475569', fontSize: '0.9rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '700' }}>{t.Technician || "-"}</td>
+                                        <td style={{ padding: '1rem 1.2rem', fontSize: '0.85rem', color: '#64748b' }}>
+                                            {getLastUpdateInfo(t) ? getLastUpdateInfo(t)?.date.toLocaleString('th-TH', { day: 'numeric', month: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : "-"}
+                                        </td>
+                                        <td style={{ padding: '1rem 1.2rem', fontSize: '0.85rem', color: '#475569', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {getLastUpdateInfo(t)?.msg || "-"}
+                                        </td>
                                         <td style={{ padding: '1rem 1.2rem', fontSize: '0.9rem' }}>{new Date(t.CreatedAt).toLocaleDateString('th-TH')}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#4338ca', fontSize: '0.9rem' }}>{t.RequestDate ? new Date(t.RequestDate).toLocaleDateString('th-TH') : "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#3b82f6', fontSize: '0.9rem' }}>{t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : "-"}</td>
