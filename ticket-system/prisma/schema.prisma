@@ -50,6 +50,10 @@ model RepairTicket {
   CreatedAt     DateTime        @default(now())
   History       TicketHistory[]
   Comments      TicketComment[]
+
+  @@index([BranchID])
+  @@index([Technician])
+  @@index([CurrentStatus])
 }
 
 model TicketHistory {

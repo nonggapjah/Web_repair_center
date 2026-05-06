@@ -67,14 +67,15 @@ export default function TechnicianTicketList() {
         return null; // None
     };
 
-    const fetchTickets = async (technicianName: string) => {
+    const fetchTickets = async (technicianName: string, isInitial = false) => {
+        if (isInitial) setIsLoading(true);
         try {
             const data = await getTechnicianTickets(technicianName, Date.now());
             setTickets(data);
         } catch (error) {
             console.error("Fetch tickets error:", error);
         } finally {
-            setIsLoading(false);
+            if (isInitial) setIsLoading(false);
         }
     };
 
@@ -86,10 +87,10 @@ export default function TechnicianTicketList() {
                 return;
             }
             setUser(session);
-            fetchTickets(session.displayName || session.username);
+            fetchTickets(session.displayName || session.username, true);
 
             // Auto-poll user tickets every 5s
-            const interval = setInterval(() => fetchTickets(session.displayName || session.username), 5000);
+            const interval = setInterval(() => fetchTickets(session.displayName || session.username, false), 5000);
             return () => clearInterval(interval);
         };
         const cleanup = init();
@@ -366,7 +367,7 @@ export default function TechnicianTicketList() {
                                                     <button onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>แปลงไฟล์ / เปิดดู</button>
                                                 </div>
                                             ) : (
-                                                <img src={url} alt={`Evidence ${idx}`} style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                                                <img src={url} alt={`Evidence ${idx}`} loading="lazy" style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                             )}
                                         </div>
                                     );
@@ -403,7 +404,7 @@ export default function TechnicianTicketList() {
                                                     ) : isHeic ? (
                                                         <button key={idx} onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
                                                     ) : (
-                                                        <img key={idx} src={url} style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                                                        <img key={idx} src={url} loading="lazy" style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                                     );
                                                 })}
                                             </div>

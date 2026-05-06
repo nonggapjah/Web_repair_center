@@ -61,20 +61,22 @@ export default function AdminDashboard() {
     const [filterTechnician, setFilterTechnician] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchTickets = async () => {
+    const fetchTickets = async (isInitial = false) => {
+        if (isInitial) setIsLoading(true);
         try {
             const data = await getAllTickets(Date.now());
+            // Only update state if data length or content actually changed (simplified check)
             setTickets(data);
         } catch (error) {
             console.error("Fetch error:", error);
         } finally {
-            setIsLoading(false);
+            if (isInitial) setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchTickets();
-        const interval = setInterval(fetchTickets, 5000);
+        fetchTickets(true);
+        const interval = setInterval(() => fetchTickets(false), 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -581,7 +583,7 @@ export default function AdminDashboard() {
                                                     <button onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>แปลงไฟล์ / เปิดดู</button>
                                                 </div>
                                             ) : (
-                                                <img src={url} alt={`Evidence ${idx}`} style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                                                <img src={url} alt={`Evidence ${idx}`} loading="lazy" style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                             )}
                                         </div>
                                     );
@@ -590,13 +592,13 @@ export default function AdminDashboard() {
                                 {selectedTicket.AdminSignature && (
                                     <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                         <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', display: 'block', marginBottom: '0.5rem' }}>ลายเซ็นผู้มอบงาน (Admin)</label>
-                                        <img src={selectedTicket.AdminSignature} alt="Admin Signature" style={{ maxHeight: '80px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+                                        <img src={selectedTicket.AdminSignature} alt="Admin Signature" loading="lazy" style={{ maxHeight: '80px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
                                     </div>
                                 )}
                                 {selectedTicket.UserSignature && (
                                     <div style={{ marginTop: '0.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                         <label style={{ fontWeight: '900', fontSize: '0.85rem', color: '#475569', display: 'block', marginBottom: '0.5rem' }}>ลายเซ็นผู้รับมอบงาน (สาขา)</label>
-                                        <img src={selectedTicket.UserSignature} alt="Branch Signature" style={{ maxHeight: '80px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+                                        <img src={selectedTicket.UserSignature} alt="Branch Signature" loading="lazy" style={{ maxHeight: '80px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
                                     </div>
                                 )}
                             </div>
@@ -631,7 +633,7 @@ export default function AdminDashboard() {
                                                     ) : isHeic ? (
                                                         <button key={idx} onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
                                                     ) : (
-                                                        <img key={idx} src={url} style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
+                                                        <img key={idx} src={url} loading="lazy" style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                                     );
                                                 })}
                                             </div>
