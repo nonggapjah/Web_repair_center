@@ -45,21 +45,40 @@ function NewTicketForm() {
     const [success, setSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        if (files.length > 0) {
-            setSelectedFiles(prev => [...prev, ...files]);
-            
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setFilePreviews(prev => [...prev, { url: reader.result as string, type: file.type }]);
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-    };
+        if (files.length === 0) return;
 
+        const processedFiles: File[] = [];
+        
+        for (const file of files) {
+            const isHeic = file.name.match(/\.(heic|heif)$/i);
+            if (isHeic) {
+                try {
+                    const heic2any = (await import('heic2any')).default;
+                    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+                    const blobArray = Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob];
+                    const newFile = new File([blobArray[0]], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                    processedFiles.push(newFile);
+                } catch (err) {
+                    console.error("HEIC conversion failed", err);
+                    processedFiles.push(file);
+                }
+            } else {
+                processedFiles.push(file);
+            }
+        }
+
+        setSelectedFiles(prev => [...prev, ...processedFiles]);
+        
+        processedFiles.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFilePreviews(prev => [...prev, { url: reader.result as string, type: file.type }]);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');

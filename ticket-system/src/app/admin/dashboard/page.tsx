@@ -206,6 +206,31 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleReplyFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const processedFiles: File[] = [];
+        for (const file of files) {
+            const isHeic = file.name.match(/\.(heic|heif)$/i);
+            if (isHeic) {
+                try {
+                    const heic2any = (await import('heic2any')).default;
+                    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+                    const blobArray = Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob];
+                    const newFile = new File([blobArray[0]], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                    processedFiles.push(newFile);
+                } catch (err) {
+                    console.error("HEIC conversion failed", err);
+                    processedFiles.push(file);
+                }
+            } else {
+                processedFiles.push(file);
+            }
+        }
+        setReplyFiles(prev => [...prev, ...processedFiles]);
+    };
+
     const handleExport = () => {
         const headers = ["TicketID", "Status", "Product", "Category", "Branch", "Tech", "Created", "ActualDate"];
         const csv = ["\uFEFF" + headers.join(",")];
@@ -616,7 +641,7 @@ export default function AdminDashboard() {
                                         ))}
                                     </div>
                                     <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                                        <input type="file" accept="image/*,video/*" multiple id="replyImg" style={{ display: 'none' }} onChange={e => { if (e.target.files) setReplyFiles(prev => [...prev, ...Array.from(e.target.files!)]) }} />
+                                        <input type="file" accept="image/*,video/*" multiple id="replyImg" style={{ display: 'none' }} onChange={handleReplyFileChange} />
                                         <label htmlFor="replyImg" style={{ padding: '0.6rem 1rem', background: '#f1f5f9', cursor: 'pointer', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '800' }}>📎 แนบรูปภาพ/วิดีโอ</label>
                                         <button onClick={handleAddComment} disabled={isReplying || (!replyMessage && replyFiles.length === 0)} style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>{isReplying ? 'ส่ง...' : 'ส่งข้อความ'}</button>
                                     </div>
