@@ -61,6 +61,23 @@ export default function AdminDashboard() {
     const [filterTechnician, setFilterTechnician] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
+    const getSLAColor = (ticket: any) => {
+        if (ticket.CurrentStatus === 'Completed' || ticket.CurrentStatus === 'Closed') {
+            return '#10b981'; // Green
+        }
+
+        const lastUpdate = ticket.History && ticket.History.length > 0
+            ? new Date(ticket.History[0].Timestamp)
+            : new Date(ticket.CreatedAt);
+
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 3600 * 24));
+
+        if (diffDays > 7) return '#ef4444'; // Red
+        if (diffDays > 3) return '#f59e0b'; // Yellow
+        return null; // None
+    };
+
     const fetchTickets = async (isInitial = false) => {
         if (isInitial) setIsLoading(true);
         try {
@@ -388,6 +405,21 @@ export default function AdminDashboard() {
                             <button onClick={() => { setStartDate(''); setEndDate(''); setFilterStatus(''); setFilterSymptom(''); setFilterBranch(''); setFilterTechnician(''); setSearchQuery(''); }} style={{ background: '#f1f5f9', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '10px', cursor: 'pointer', fontWeight: '800', width: '100%', color: '#64748b' }}>ล้างตัวกรองทั้งหมด</button>
                         </div>
                     </div>
+                    
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.75rem', fontWeight: '800' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }}></span>
+                            <span style={{ color: '#475569' }}>เขียว: งานเสร็จสิ้น</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }}></span>
+                            <span style={{ color: '#475569' }}>เหลือง: ไม่ขยับเกิน 3 วัน</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
+                            <span style={{ color: '#475569' }}>แดง: ไม่ขยับเกิน 7 วัน</span>
+                        </div>
+                    </div>
                 </div>
 
                 {viewMode === 'overview' && (
@@ -492,7 +524,17 @@ export default function AdminDashboard() {
                                 {filteredTickets.map(t => (
                                     <tr key={t.TicketID} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }} onClick={() => setSelectedTicket(t)}>
                                         <td style={{ padding: '1rem 1.2rem' }}>
-                                            <span style={{ display: 'inline-block', whiteSpace: 'nowrap', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', background: statusColor(t.CurrentStatus) + '20', color: statusColor(t.CurrentStatus), border: `1px solid ${statusColor(t.CurrentStatus)}` }}>{translateStatus(t.CurrentStatus)}</span>
+                                            <span style={{ 
+                                                display: 'inline-block', 
+                                                whiteSpace: 'nowrap', 
+                                                padding: '0.4rem 0.8rem', 
+                                                borderRadius: '8px', 
+                                                fontSize: '0.8rem', 
+                                                fontWeight: '800', 
+                                                background: getSLAColor(t) || `${statusColor(t.CurrentStatus)}20`, 
+                                                color: getSLAColor(t) ? '#fff' : statusColor(t.CurrentStatus), 
+                                                border: getSLAColor(t) ? 'none' : `1px solid ${statusColor(t.CurrentStatus)}` 
+                                            }}>{translateStatus(t.CurrentStatus)}</span>
                                         </td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#1e293b' }}>{t.Product || "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem' }}>{t.Symptom}</td>

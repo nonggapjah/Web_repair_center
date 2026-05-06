@@ -236,6 +236,20 @@ export default function TechnicianTicketList() {
                             <h1 style={{ color: 'var(--accent-primary)', fontSize: '2.2rem', marginBottom: '0.5rem' }}>กระดานงานช่าง ({user.displayName || user.username})</h1>
                             <p style={{ color: 'var(--text-muted)' }}>รายการแจ้งซ่อมที่ได้รับมอบหมาย</p>
                         </div>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.75rem', fontWeight: '800' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }}></span>
+                                <span style={{ color: '#475569' }}>เขียว: งานเสร็จสิ้น</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }}></span>
+                                <span style={{ color: '#475569' }}>เหลือง: ไม่ขยับเกิน 3 วัน</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
+                                <span style={{ color: '#475569' }}>แดง: ไม่ขยับเกิน 7 วัน</span>
+                            </div>
+                        </div>
                     </div>
 
                     {isLoading ? (
