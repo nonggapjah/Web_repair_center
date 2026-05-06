@@ -5,6 +5,7 @@ import { getBranchTickets, updateTicketStatus, addTicketComment } from '@/app/ac
 import { getSession, logout } from '@/app/actions/auth';
 import { supabase } from '@/lib/supabase';
 import { SignatureModal } from '@/components/SignatureModal';
+import HeicViewerModal from '@/components/HeicViewerModal';
 
 export default function UserTicketList() {
     const [tickets, setTickets] = useState<any[]>([]);
@@ -18,6 +19,7 @@ export default function UserTicketList() {
     const [isReplying, setIsReplying] = useState(false);
     const [showSignPad, setShowSignPad] = useState(false);
     const [submittingTicketId, setSubmittingTicketId] = useState<string | null>(null);
+    const [heicUrlToView, setHeicUrlToView] = useState<string | null>(null);
 
     const translateStatus = (status: string) => {
         switch (status) {
@@ -392,7 +394,7 @@ export default function UserTicketList() {
                                         ) : isHeic ? (
                                             <div style={{ padding: '1rem', background: '#f1f5f9', borderRadius: '15px', border: '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                 <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '800' }}>🖼️ รูปภาพ (HEIC จาก iPhone)</span>
-                                                <button onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>ดาวน์โหลด / เปิดดู</button>
+                                                <button onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>แปลงไฟล์ / เปิดดู</button>
                                             </div>
                                         ) : (
                                             <img src={url} alt={`Evidence ${idx}`} style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
@@ -443,7 +445,7 @@ export default function UserTicketList() {
                                                         )}
                                                     </div>
                                                 ) : isHeic ? (
-                                                    <button key={idx} onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
+                                                    <button key={idx} onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
                                                 ) : (
                                                     <img key={idx} src={url} style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                                 );
@@ -502,6 +504,10 @@ export default function UserTicketList() {
                 onClose={() => { setShowSignPad(false); setSubmittingTicketId(null); }}
                 onConfirm={submitConfirmSuccess}
             />
+
+            {heicUrlToView && (
+                <HeicViewerModal url={heicUrlToView} onClose={() => setHeicUrlToView(null)} />
+            )}
         </>
     );
 }

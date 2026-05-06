@@ -4,6 +4,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { getAllTickets, updateTicketStatus, addTicketComment } from '@/app/actions/tickets';
 import { supabase } from '@/lib/supabase';
 import { SignatureModal } from '@/components/SignatureModal';
+import HeicViewerModal from '@/components/HeicViewerModal';
 
 const statuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed", "Closed"];
 const adminSelectableStatuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed"]; // No 'Closed'
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
     const [pendingStatus, setPendingStatus] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showSignPad, setShowSignPad] = useState(false);
+    const [heicUrlToView, setHeicUrlToView] = useState<string | null>(null);
 
     // Timeline/Chat states
     const [replyMessage, setReplyMessage] = useState('');
@@ -576,7 +578,7 @@ export default function AdminDashboard() {
                                             ) : isHeic ? (
                                                 <div style={{ padding: '1rem', background: '#f1f5f9', borderRadius: '15px', border: '2px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                     <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '800' }}>🖼️ รูปภาพ (HEIC จาก iPhone)</span>
-                                                    <button onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>ดาวน์โหลด / เปิดดู</button>
+                                                    <button onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800' }}>แปลงไฟล์ / เปิดดู</button>
                                                 </div>
                                             ) : (
                                                 <img src={url} alt={`Evidence ${idx}`} style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
@@ -627,7 +629,7 @@ export default function AdminDashboard() {
                                                             )}
                                                         </div>
                                                     ) : isHeic ? (
-                                                        <button key={idx} onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
+                                                        <button key={idx} onClick={() => setHeicUrlToView(url)} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
                                                     ) : (
                                                         <img key={idx} src={url} style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(url, '_blank')} />
                                                     );
@@ -710,6 +712,9 @@ export default function AdminDashboard() {
                 onClose={() => setShowSignPad(false)}
                 onConfirm={(sig) => handleSaveUpdate(sig)}
             />
+            {heicUrlToView && (
+                <HeicViewerModal url={heicUrlToView} onClose={() => setHeicUrlToView(null)} />
+            )}
         </div>
     );
 }
