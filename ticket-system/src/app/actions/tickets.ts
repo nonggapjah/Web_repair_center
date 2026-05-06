@@ -78,6 +78,25 @@ export async function getBranchTickets(branchId: string, _t?: number) {
     });
 }
 
+export async function getTechnicianTickets(technicianName: string, _t?: number) {
+    noStore();
+    return await prisma.repairTicket.findMany({
+        where: { Technician: technicianName },
+        include: {
+            Branch: true,
+            User: true,
+            History: {
+                orderBy: { Timestamp: 'desc' }
+            },
+            Comments: {
+                include: { User: true },
+                orderBy: { Timestamp: 'desc' }
+            }
+        },
+        orderBy: { CreatedAt: 'desc' }
+    });
+}
+
 export async function getAllTickets(_t?: number) {
     noStore();
     return await prisma.repairTicket.findMany({

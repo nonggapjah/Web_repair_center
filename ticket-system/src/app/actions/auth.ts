@@ -19,9 +19,22 @@ export async function login(username: string, password?: string) {
             return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
         }
 
+        const techMapping: Record<string, string> = {
+            "yot": "ช่างยศ",
+            "cha": "ช่างชา",
+            "ton": "ช่างต้น",
+            "pat": "ช่างปาด",
+            "sakol": "ช่างสกล",
+            "kiat": "ช่างเขียด",
+            "prawit": "ช่างประวิท",
+            "deaw": "ช่างเดี่ยว",
+            "team": "ทีมช่างรับเหมา"
+        };
+
         const sessionData = JSON.stringify({
             userId: user.UserID,
             username: user.Username,
+            displayName: techMapping[user.Username.toLowerCase()] || user.Username,
             role: user.Role,
             branchId: user.BranchID,
             branchName: user.Branch?.BranchName || ""
@@ -38,7 +51,7 @@ export async function login(username: string, password?: string) {
         return {
             success: true,
             role: user.Role,
-            redirect: user.Role === 'Admin' ? '/admin/dashboard' : '/user/dashboard'
+            redirect: user.Role === 'Admin' ? '/admin/dashboard' : user.Role === 'Technician' ? '/technician/dashboard' : '/user/dashboard'
         };
     } catch (error) {
         console.error("Login error:", error);
