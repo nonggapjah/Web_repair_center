@@ -380,7 +380,15 @@ export default function UserTicketList() {
                                 return (
                                     <div key={idx} style={{ marginTop: '1rem' }}>
                                         {isVideo ? (
-                                            <video src={url} controls style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9' }} />
+                                            <div style={{ position: 'relative' }}>
+                                                <video src={url} controls style={{ width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', background: '#0f172a' }} />
+                                                {url.match(/\.(mov)$/i) && (
+                                                    <div style={{ padding: '0.8rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: '#991b1b', fontWeight: '800' }}>⚠️ วิดีโอ iPhone (.mov) อาจมีแต่เสียง ให้กดดาวน์โหลดเพื่อดูภาพครับ</span>
+                                                        <button onClick={() => window.open(url, '_blank')} style={{ padding: '0.4rem 0.8rem', background: '#ef4444', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}>ดาวน์โหลด</button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         ) : isHeic ? (
                                             <div style={{ padding: '1rem', background: '#f1f5f9', borderRadius: '15px', border: '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                 <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '800' }}>🖼️ รูปภาพ (HEIC จาก iPhone)</span>
@@ -428,7 +436,12 @@ export default function UserTicketList() {
                                                 const isVideo = url.match(/\.(mp4|webm|mov|ogg)$/i);
                                                 const isHeic = url.match(/\.(heic|heif)$/i);
                                                 return isVideo ? (
-                                                    <video key={idx} src={url} controls style={{ maxWidth: '200px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                                                    <div key={idx} style={{ position: 'relative', maxWidth: '250px' }}>
+                                                        <video src={url} controls style={{ width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#0f172a' }} />
+                                                        {url.match(/\.(mov)$/i) && (
+                                                            <button onClick={() => window.open(url, '_blank')} style={{ width: '100%', padding: '0.5rem', background: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fca5a5', cursor: 'pointer', fontWeight: '800', fontSize: '0.7rem', marginTop: '0.3rem' }}>⚠️ โหลดวิดีโอ (.mov)</button>
+                                                        )}
+                                                    </div>
                                                 ) : isHeic ? (
                                                     <button key={idx} onClick={() => window.open(url, '_blank')} style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', borderRadius: '10px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: '800', fontSize: '0.8rem' }}>🖼️ ดูรูป HEIC</button>
                                                 ) : (
