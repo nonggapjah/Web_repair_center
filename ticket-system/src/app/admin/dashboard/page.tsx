@@ -577,8 +577,6 @@ export default function AdminDashboard() {
                         </table>
                     </div>
                 )}
-
-                )}
             </main>
 
             {/* Modal */}
