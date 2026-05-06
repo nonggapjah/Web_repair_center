@@ -47,18 +47,7 @@ const branches = [
   { code: '1057', telex: 'vl1057', name: 'KAMALA PHUKET' },
   { code: '1058', telex: 'vl1058', name: 'LTTLE - RATTANATIBETH' },
   { code: '1059', telex: 'vl1059', name: 'VILLA KINGSQUARE' },
-  { code: '9000', telex: 'vl9000', name: 'DC 33' },
-  { code: '9001', telex: 'vl9001', name: 'DC 33' },
-  { code: '9002', telex: 'vl9002', name: 'DC 33' },
-  { code: '9003', telex: 'vl9003', name: 'DC 33' },
-  { code: '9004', telex: 'vl9004', name: 'DC LAT KRABANG (Ambient)' },
-  { code: '9005', telex: 'vl9005', name: 'DC LAT KRABANG (Chilled)' },
-  { code: '9006', telex: 'vl9006', name: 'DC LAT KRABANG (Fresh)' },
-  { code: '9007', telex: 'vl9007', name: 'DC LAT KRABANG (Frozen)' },
-  { code: '9008', telex: 'vl9008', name: 'Warehouse Online' },
-  { code: '9009', telex: 'vl9009', name: 'DCLATKRABANG SUPPLIES' },
-  { code: '9010', telex: 'vl9010', name: 'Return Dc LK(Ambient)' },
-  { code: '9011', telex: 'vl9011', name: 'Return Dc LK(Fresh)' }
+  { code: 'DC', telex: 'dclat', name: 'DC LAT KRABANG' }
 ];
 
 async function main() {
