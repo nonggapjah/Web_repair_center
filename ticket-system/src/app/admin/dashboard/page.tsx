@@ -37,7 +37,7 @@ const statusColor = (status: string) => {
 export default function AdminDashboard() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'overview'>('overview');
+    const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'overview'>('list');
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
     const [selectedTech, setSelectedTech] = useState('');
