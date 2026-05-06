@@ -53,9 +53,6 @@ export async function createTicket(formData: {
             }
         });
 
-        revalidatePath('/user/dashboard');
-        revalidatePath('/admin/dashboard');
-
         return { success: true, ticketId: ticket.TicketID };
     } catch (error) {
         console.error("Create ticket error:", error);
@@ -116,7 +113,7 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
             updateData.UserSignature = signatureBase64;
         }
 
-        await Promise.all([
+        await prisma.$transaction([
             prisma.repairTicket.update({
                 where: { TicketID: ticketId },
                 data: updateData
@@ -140,8 +137,6 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
             })
         ]);
 
-        revalidatePath('/user/dashboard');
-        revalidatePath('/admin/dashboard');
         return { success: true };
     } catch (error) {
         console.error("Update ticket error:", error);
@@ -187,8 +182,6 @@ export async function addTicketComment(ticketId: string, message: string, imageU
             });
         }
 
-        revalidatePath('/user/dashboard');
-        revalidatePath('/admin/dashboard');
         return { success: true };
     } catch (error) {
         console.error("Add comment error:", error);
@@ -219,8 +212,6 @@ export async function markNotificationRead(notifId: string) {
         where: { NotifID: notifId },
         data: { IsRead: true }
     });
-    revalidatePath('/user/dashboard');
-    revalidatePath('/admin/dashboard');
 }
 
 export async function markAllNotificationsRead(branchId: string, role: string) {

@@ -147,21 +147,32 @@ export default function AdminDashboard() {
 
         setShowSignPad(false);
         setIsUpdating(true);
+        
+        const previousTicket = selectedTicket;
+        const currentPendingStatus = pendingStatus;
+        const currentTechNote = techNote;
+        const currentSelectedTech = selectedTech;
+        const currentActualDate = actualDate;
+
+        // Optimistic update - close modal immediately for snappy feeling
+        setTickets(prev => prev.map(t => t.TicketID === previousTicket.TicketID ? {
+            ...t,
+            CurrentStatus: currentPendingStatus,
+            Technician: currentSelectedTech || t.Technician,
+            ActualDate: currentActualDate ? new Date(currentActualDate).toISOString() : t.ActualDate,
+            AdminSignature: overrideSignature || t.AdminSignature
+        } : t));
+        setSelectedTicket(null);
+
         try {
-            await updateTicketStatus(selectedTicket.TicketID, pendingStatus, techNote, selectedTech, actualDate, overrideSignature);
-
-            // Optimistic update
-            setTickets(prev => prev.map(t => t.TicketID === selectedTicket.TicketID ? {
-                ...t,
-                CurrentStatus: pendingStatus,
-                Technician: selectedTech || t.Technician,
-                ActualDate: actualDate ? new Date(actualDate).toISOString() : t.ActualDate,
-                AdminSignature: overrideSignature || t.AdminSignature
-            } : t));
-
-            setSelectedTicket(null);
-            // alert('บันทึกสำเร็จ');
-        } catch (err) { alert('ผิดพลาด'); } finally { setIsUpdating(false); }
+            await updateTicketStatus(previousTicket.TicketID, currentPendingStatus, currentTechNote, currentSelectedTech, currentActualDate, overrideSignature);
+            // State will naturally refresh on next polling cycle
+        } catch (err) { 
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+            fetchTickets(); // Revert on failure
+        } finally { 
+            setIsUpdating(false); 
+        }
     };
 
     const handleAddComment = async () => {
