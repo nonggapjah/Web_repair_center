@@ -1,10 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import bcrypt from "bcryptjs";
+
+const BCRYPT_SALT_ROUNDS = 10;
 
 export async function login(username: string, password?: string) {
     try {
-        // ค้นหาผู้ใช้งานจากฐานข้อมูล MSSQL โดยตรง
         const user = await prisma.user.findFirst({
             where: { Username: username },
             include: { Branch: true }
@@ -14,9 +16,32 @@ export async function login(username: string, password?: string) {
             return { success: false, error: "ไม่พบชื่อผู้ใช้งานนี้ในระบบ" };
         }
 
-        // เช็ครหัสผ่าน (ใช้ข้อมูลจากที่สร้างใน MSSQL)
-        if ((user as any).Password !== password) {
+        if (!password) {
             return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
+        }
+
+        const u = user as typeof user & { Password: string; PasswordHash: string | null };
+
+        if (u.PasswordHash) {
+            const ok = await bcrypt.compare(password, u.PasswordHash);
+            if (!ok) {
+                return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
+            }
+        } else {
+            if (u.Password !== password) {
+                return { success: false, error: "รหัสผ่านไม่ถูกต้อง" };
+            }
+            // Lazy migration: hash this plaintext password and persist for next login
+            try {
+                const hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+                await prisma.user.update({
+                    where: { UserID: u.UserID },
+                    data: { PasswordHash: hash } as any
+                });
+            } catch (migrationError) {
+                console.error(`[AUTH] Lazy migration failed for user ${u.Username}:`, migrationError);
+                // Non-fatal — user already authenticated; backfill script will catch this row
+            }
         }
 
         const techMapping: Record<string, string> = {
@@ -44,7 +69,7 @@ export async function login(username: string, password?: string) {
         cookieStore.set("user_session", sessionData, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            maxAge: 60 * 60 * 24, // 1 วัน
+            maxAge: 60 * 60 * 24,
             path: "/"
         });
 

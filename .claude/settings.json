@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "The user is about to modify a file. Check if the file path contains '.claude/CLAUDE.md', '.claude/policies/', or '.claude/agents/'. If it matches any of these PROTECTED paths, respond 'yes' ONLY if the user has explicitly authorized policy modifications in this session. Otherwise respond 'no' to block. If the file is NOT protected, respond 'yes' to allow."
+            "prompt": "Identify the file_path argument from the tool call. PROTECTED paths are EXACTLY: (1) the literal file '.claude/CLAUDE.md' (or '.claude\\CLAUDE.md'), (2) any file directly inside '.claude/policies/' (or '.claude\\policies\\'), (3) any file directly inside '.claude/agents/' (or '.claude\\agents\\'). All other files including '.claude/UserProfile.md', '.claude/ProjectEnvironment.md', '.claude/settings.json', '.claude/settings.local.json', '.claude/template-version.json', and any file under '.claude/skills/', '.claude/rules/', '.claude/team_chat/', '.claude/hooks/' are NOT protected. Respond 'no' to BLOCK only if the file matches one of the three protected categories AND the user has not explicitly authorized policy modifications in this session. Otherwise respond 'yes' to ALLOW."
           }
         ]
       }

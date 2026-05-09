@@ -16,40 +16,41 @@ model Branch {
 }
 
 model User {
-  UserID     String          @id @default(uuid())
-  Username   String          @unique
-  Password   String          @default("1234") 
-  Role       String          @default("User") 
-  BranchID   String
-  Branch     Branch          @relation(fields: [BranchID], references: [BranchID])
-  Tickets    RepairTicket[]
-  Comments   TicketComment[]
-  CreatedAt  DateTime        @default(now())
+  UserID       String          @id @default(uuid())
+  Username     String          @unique
+  Password     String          @default("1234")
+  PasswordHash String?
+  Role         String          @default("User")
+  BranchID     String
+  Branch       Branch          @relation(fields: [BranchID], references: [BranchID])
+  Tickets      RepairTicket[]
+  Comments     TicketComment[]
+  CreatedAt    DateTime        @default(now())
 }
 
 model RepairTicket {
-  TicketID      String          @id @default(cuid())
-  UserID        String
-  User          User            @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
-  BranchID      String
-  Branch        Branch          @relation(fields: [BranchID], references: [BranchID], onDelete: NoAction, onUpdate: NoAction)
-  Product       String
-  Symptom       String
-  Description   String?
-  ImageURL      String?
-  Priority      String          @default("Medium")
-  CurrentStatus String          @default("Planed")
-  RequestDate   DateTime?
-  ActualDate    DateTime?
-  SLA_Deadline  DateTime?
-  TotalCost     Float?
-  CSAT_Score    Int?
-  Technician    String?
+  TicketID       String          @id @default(cuid())
+  UserID         String
+  User           User            @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
+  BranchID       String
+  Branch         Branch          @relation(fields: [BranchID], references: [BranchID], onDelete: NoAction, onUpdate: NoAction)
+  Product        String
+  Symptom        String
+  Description    String?
+  ImageURL       String?
+  Priority       String          @default("Medium")
+  CurrentStatus  String          @default("Planed")
+  RequestDate    DateTime?
+  ActualDate     DateTime?
+  SLA_Deadline   DateTime?
+  TotalCost      Float?
+  CSAT_Score     Int?
+  Technician     String?
   AdminSignature String?
   UserSignature  String?
-  CreatedAt     DateTime        @default(now())
-  History       TicketHistory[]
-  Comments      TicketComment[]
+  CreatedAt      DateTime        @default(now())
+  History        TicketHistory[]
+  Comments       TicketComment[]
 
   @@index([BranchID])
   @@index([Technician])
@@ -79,8 +80,8 @@ model TicketComment {
 
 model Notification {
   NotifID    String   @id @default(cuid())
-  TargetRole String?  // 'Admin' or 'Branch'
-  TargetUser String?  // Specific BranchID
+  TargetRole String? // 'Admin' or 'Branch'
+  TargetUser String? // Specific BranchID
   Title      String
   Message    String
   TicketID   String?
