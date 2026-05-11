@@ -205,3 +205,221 @@ Created `Development/Web_repair_center/06_InstallationGuide/DeploymentRunbook.md
 **Final state:** 3/3 Monolith tickets COMPLETE. Build PASS. Static + DB checks PASS. Holding for Commander Phase 1 acceptance after OVS-04 walkthrough.
 
 **Hold for Commander accept on Phase 1.** Do NOT advance to Phase 2. Auth: hold.
+
+---
+
+## Phase 2A — Monolith
+
+### MON-10 — Schema: AuditLog + FailedLoginAttempt tables
+**Filed by:** AT (Atlas, Conductor)
+**Date:** 11-05-2026
+**Status:** COMPLETE
+**Phase:** 2A — Security Hardening
+**Wave:** 2 (parallel with Syndicate subagent A)
+
+**Summary**
+Appended two security-domain models to `ticket-system/prisma/schema.prisma` (lines 92-127). `AuditLog` — 10 columns (`LogID` cuid PK, `UserID?`, `Action`, `EntityType?`, `EntityID?`, `Before?`, `After?`, `IPAddress?`, `UserAgent?`, `Timestamp` defaulting `now()`), 4 declared `@@index` directives (`UserID`, `Action`, composite `EntityType+EntityID`, `Timestamp`) — total 5 indexes including PK. `FailedLoginAttempt` — 4 columns (`AttemptID` cuid PK, `Username`, `IPAddress?`, `AttemptedAt` defaulting `now()`), 1 composite `@@index([Username, AttemptedAt])` — total 2 indexes including PK. Both models commented with the no-FK rationale: AuditLog must survive User deletion to preserve trail; FailedLoginAttempt.Username may refer to non-existent accounts (attempts recorded before auth resolves); User schema is in flux pending Phase 2D Password column drop.
+
+`npx prisma format` clean. `npx prisma validate` reports valid. `npx prisma db push` synced cleanly in 1.93s ("Your database is now in sync with your Prisma schema") and auto-ran `prisma generate` (102ms) — no Windows DLL EPERM (no stale `next dev` process holding the DLL). `npx tsc --noEmit` clean. `npm run build` PASS — Next.js 16.2.6 Turbopack, compiled in 4.4s, TypeScript phase clean, 7 user-facing routes intact (`/`, `/admin/dashboard`, `/api/proxy-image`, `/login`, `/technician/dashboard`, `/user/dashboard`, `/user/new-ticket`) + `/_not-found` — identical signature to Phase 1 closeout.
+
+Read-only probe `scripts/mon10_probe.ts` verified via `information_schema` + `pg_indexes` + Prisma Client introspection: both tables exist in `public` schema with correct quoted casing, exact column counts (10 + 4), exact index counts including PK (5 + 2), both tables empty (no data migration), and `prisma.auditLog` / `prisma.failedLoginAttempt` model namespaces present on the Prisma Client. Probe deleted post-verification per §6 RELEASE rule.
+
+**Acceptance Criteria**
+- [x] Schema edited — 2 new models appended (no existing model touched)
+- [x] `npx prisma format` clean
+- [x] `npx prisma validate` valid
+- [x] `npx prisma db push` synced — DB has 2 new tables + 7 new indexes (5 on AuditLog incl. PK + 2 on FailedLoginAttempt incl. PK)
+- [x] `npx prisma generate` — Prisma Client knows both new models (auto-run by `db push`; re-verified during `npm run build`)
+- [x] Supabase introspection: AuditLog (10 cols / 5 indexes) + FailedLoginAttempt (4 cols / 2 indexes) exist, both empty
+- [x] `npm run build` PASS — 7 routes (no regression from Phase 1)
+- [x] `npx tsc --noEmit` clean — typecheck satisfied
+- [x] No regression on existing models (Branch, User, RepairTicket, TicketHistory, TicketComment, Notification untouched)
+- [x] No foreign keys to User (per ticket Notes — design decision logged)
+- [x] No data migration
+
+**Blockers:** None.
+
+**Dependency Signal**
+Ticket MON-10 is COMPLETE. Teams waiting may now proceed:
+- **Syndicate SYN-08** (brute-force rate limit on login) — can read/write `FailedLoginAttempt` via `prisma.failedLoginAttempt`
+- **Syndicate SYN-11** (audit logging helper + apply to admin actions) — can write `AuditLog` via `prisma.auditLog`
+
+**Next Step for AM:** Signal Wave 3 (Syndicate subagent B — SYN-08 + SYN-11) unblocked. MON-10 delivery is schema-only; the consuming code lives in Syndicate's domain (rate-limit helper in `auth.ts`, audit-log helper in `lib/` + admin action wrappers in `actions/tickets.ts`). Verification at OVS-05 (Phase 2A UX smoke + User Journey) will confirm the live tables receive writes from the new consumers.
+
+---
+
+### Monolith Phase 2A Closeout
+
+| Ticket | Status | Build | DB push | Verification |
+|---|---|---|---|---|
+| MON-10 | [x] Complete | PASS — Next.js 16.2.6, 7 routes | OK, 1.93s | Probe PASS — 2 tables, 14 cols, 7 indexes, both empty, Prisma Client knows models; probe deleted (§6) |
+
+**Source changes (this phase):**
+- `ticket-system/prisma/schema.prisma` — append-only, 36 lines added (2 new models + design-rationale comment block)
+
+**DB changes (this phase):**
+- New table `public."AuditLog"` (10 cols, 5 indexes incl. PK)
+- New table `public."FailedLoginAttempt"` (4 cols, 2 indexes incl. PK)
+- Zero existing rows touched
+
+**Probes created + deleted (§6 RELEASE compliance):**
+- `ticket-system/scripts/mon10_probe.ts` — created, run, results captured, deleted in same wave
+
+**Constraints honored:**
+- No edits to other models (Branch, User, RepairTicket, TicketHistory, TicketComment, Notification)
+- No foreign keys to User (per ticket Notes — string refs only)
+- No data migration on existing rows
+- No build break (7 routes intact)
+- No source code outside `prisma/schema.prisma`
+
+**Hold for Wave 3 — do NOT advance.** Monolith's Phase 2A work is complete. Awaiting AM's Wave 3 dispatch to Syndicate subagent B (SYN-08 + SYN-11).
+
+---
+
+## Phase 2A — Syndicate
+
+### SYN-09 — Role-based session timeout
+**Filed by:** DR (Director)
+**Date:** 11-05-2026
+**Status:** COMPLETE
+**Phase:** 2A — Security Hardening
+**Wave:** 3 (sequential — single subagent, all four Syndicate tickets share auth.ts/tickets.ts)
+
+**Summary**
+Replaced hardcoded `maxAge: 60 * 60 * 24` in `auth.ts` cookie-set with a role-driven `getSessionTimeoutForRole(role)` helper. Defaults: Admin 14400s (4h), Technician 28800s (8h), User 86400s (24h). Env override via `SESSION_TIMEOUT_ADMIN_SEC` / `SESSION_TIMEOUT_TECHNICIAN_SEC` / `SESSION_TIMEOUT_USER_SEC` with defensive `Number.isFinite && >0` parse — invalid env falls back to default. Cookie name, `httpOnly`, `secure`, `path` unchanged per Boundaries. `login()` / `logout()` / `getSession()` function signatures preserved. `.env.example` updated with placeholders + comments (`.env` untouched).
+
+**Acceptance Criteria**
+- [x] `auth.ts` modified — helper + role-driven maxAge wired into `login()`
+- [x] `.env.example` placeholders added with explanation comments
+- [x] `npx tsc --noEmit` clean
+- [x] `npx next build` PASS — 7 routes intact (`/`, `/admin/dashboard`, `/api/proxy-image`, `/login`, `/_not-found`, `/technician/dashboard`, `/user/dashboard`, `/user/new-ticket`)
+- [x] Cookie shape preserved (httpOnly, secure-when-prod, path=/)
+- [x] Regression test added: `09_TestCase/_regression/session_timeout.spec.md` (7 TCs — defaults per role, env override, invalid-env fallback, cookie attribute integrity, function signature preservation)
+
+**Blockers:** None.
+
+**Next Step for AM:** Surface to OVS-05 walkthrough — manually verify `Set-Cookie: Max-Age` per role during admin/tech/branch login paths.
+
+---
+
+### SYN-10 — CSRF audit + cookie SameSite
+**Filed by:** DR (Director)
+**Date:** 11-05-2026
+**Status:** COMPLETE
+
+**Summary**
+Added `sameSite: "lax"` to `cookies().set("user_session", ...)` in `auth.ts` — single-line diff, all other cookie options preserved. Produced full CSRF audit in `Development/Web_repair_center/08_AuditReport/CSRF_Audit_Phase2A.md` (169 lines, 9 sections). Audit confirmed: every state-changing mutation in the codebase flows through Next.js Server Actions (`"use server"` directive in `auth.ts` + `tickets.ts`); the only custom REST route (`/api/proxy-image/route.ts`) is GET-only and CSRF-irrelevant. Built-in Next 16 CSRF defense (signed action IDs + Origin header check) plus `SameSite=Lax` cookie provide full coverage for the current surface. Two out-of-scope observations filed as Phase 2B follow-up recommendations: (F-03) Server Actions do not internally verify caller role, (F-04) `/api/proxy-image` accepts arbitrary URLs (SSRF, not CSRF).
+
+**Acceptance Criteria**
+- [x] `auth.ts` — `sameSite: "lax"` added
+- [x] `/api/proxy-image/route.ts` audited (GET-only, no state mutation, no session read — CSRF n/a documented)
+- [x] All 13 server-action exports catalogued (3 in auth.ts, 10 in tickets.ts) with state-change classification
+- [x] `08_AuditReport/CSRF_Audit_Phase2A.md` created — Executive Summary, Server Actions table, REST route audit, cookie before/after, Findings, Verification steps, Sign-off, Follow-ups, Audit Trail
+- [x] Cookie name + `httpOnly` + `secure` + `path` unchanged
+- [x] `npx tsc --noEmit` clean
+- [x] `npx next build` PASS — 7 routes
+- [x] Zero CSRF vulnerabilities in current surface (per audit §1)
+
+**Blockers:** None.
+
+**Next Step for AM:** Surface F-03 (role gate) and F-04 (proxy SSRF allow-list) for Phase 2B Operations triage. SYN-10 itself is closed.
+
+---
+
+### SYN-08 — Brute-force rate limit on login
+**Filed by:** DR (Director)
+**Date:** 11-05-2026
+**Status:** COMPLETE
+
+**Summary**
+Brute-force protection wired into `auth.ts` `login()`. Three helpers added: `checkRateLimit(username)` runs as the FIRST DB op (before user lookup — closes the enumeration-by-timing gap and forces unknown-user attempts to also count); `recordFailedAttempt(username)` inserts a `FailedLoginAttempt` row on every failure branch (no user, no password, bcrypt mismatch, plaintext mismatch); `clearFailedAttempts(username)` wipes the ledger for the winning Username immediately before cookie set. Defaults: 10 attempts / 15 min window / 15 min lockout. Env overrides: `RATE_LIMIT_MAX_ATTEMPTS` / `RATE_LIMIT_WINDOW_MIN` / `RATE_LIMIT_LOCKOUT_MIN` with defensive parsing. Lockout-remaining time is rendered into the Thai user-facing message (`"ลองเข้าระบบล้มเหลวหลายครั้งเกินไป กรุณารอ N นาที"`). Lockout self-expires naturally — once `latest_attempt + LOCKOUT_MIN` is in the past, the gate allows the next attempt; no cron job required. Ledger writes/clears are fail-soft (`try/catch` with `console.error` reason — State Transparency Rule honored). New error code `ERR_AUTH_RATE_LIMITED = -1010` registered in `ErrorCatalog.md` (-1xxx Auth range, first entry) with user message + cause + remediation. Composite index `[Username, AttemptedAt]` from MON-10 makes the windowed COUNT cheap.
+
+**Acceptance Criteria**
+- [x] `auth.ts` — gate runs BEFORE user lookup; failed attempts recorded on every failure path; ledger cleared on success
+- [x] `ERR_AUTH_RATE_LIMITED = -1010` added to ErrorCatalog.md with Thai user message + audit-trail entry
+- [x] `.env.example` updated with `RATE_LIMIT_*` placeholders + comments
+- [x] `login()` / `logout()` / `getSession()` signatures unchanged
+- [x] `npx tsc --noEmit` clean
+- [x] `npx next build` PASS — 7 routes
+- [x] Regression test added: `09_TestCase/_regression/login_rate_limit.spec.md` (12 TCs — under-cap pass, at-cap lockout, cleared-on-success, outside-window rolling count, time-elapsed unlock, unknown-user counted, missing-password counted, signature preservation, env override, invalid-env fallback, fail-soft ledger errors)
+
+**Blockers:** None.
+
+**Next Step for AM:** OVS-05 should include: (1) login flow still works for `1000/vl1000` and admin; (2) lockout triggers after configured attempts (recommend tuning down to 3 attempts in `.env` for the smoke session, then resetting to 10).
+
+---
+
+### SYN-11 — Audit logging helper + apply to admin actions
+**Filed by:** DR (Director)
+**Date:** 11-05-2026
+**Status:** COMPLETE
+
+**Summary**
+Created `ticket-system/src/lib/audit.ts` — `logAudit(entry: AuditEntry): Promise<void>` plus a `safeStringify()` helper. Full try/catch wrap; never throws by construction; ledger write failure emits `console.error('[audit] failed to write log entry', { action, error })` and returns. Applied to 3 admin/state-changing actions in `actions/tickets.ts`:
+1. `updateTicketStatus()` → `action: "ticket.status.update"`, Before/After snapshots `{ CurrentStatus, Technician, ActualDate }` (signatures explicitly excluded — sensitive)
+2. `addTicketComment()` → `action: "ticket.comment.add"`, After payload includes `hasImage` flag + 80-char message preview, `userId` from already-resolved `actualUserId`
+3. `markAllNotificationsRead()` → `action: "notification.bulkClear"`, pre-counts via `prisma.notification.count` for the Before snapshot, captures destructive bulk delete
+
+`userId` resolution: `getSession()` is awaited inside `updateTicketStatus` and `markAllNotificationsRead` (best-effort; null-safe). All audited writes are `await logAudit(...)` — entry into the helper's try/catch is guaranteed even on path divergence. No new error code needed (helper is fail-soft by design per ticket spec). Composite indexes from MON-10 (`UserID`, `Action`, `[EntityType, EntityID]`, `Timestamp`) align with the anticipated read patterns for the Phase 2D admin read UI.
+
+**Acceptance Criteria**
+- [x] `src/lib/audit.ts` exists, exports `logAudit()` + `AuditEntry` interface (56 LOC)
+- [x] 3 admin actions wrapped (status update / comment add / bulk-clear notifications)
+- [x] All wrappers log: Before snapshot (where applicable), After snapshot, action name, entityType, entityId, userId from session
+- [x] Sensitive fields scrubbed: no Password, PasswordHash, AdminSignature, UserSignature in any snapshot
+- [x] `logAudit()` never throws — try/catch wrap verified by code inspection
+- [x] `npx tsc --noEmit` clean
+- [x] `npx next build` PASS — 7 routes
+- [x] Regression test added: `09_TestCase/_regression/audit_log_writes.spec.md` (10 TCs — 3 happy-path writes, fail-soft, circular-ref handling, no-throw boundary, sanitization audit, return-shape preservation, action-name convention, userId resolution)
+
+**Blockers:** None.
+
+**Next Step for AM:** OVS-05 walkthrough — admin updates a ticket status → query Supabase `SELECT * FROM "AuditLog" ORDER BY "Timestamp" DESC LIMIT 5;` and confirm the new row's UserID, Action, EntityID, Before, After fields. Phase 2D will add the read UI.
+
+---
+
+### Syndicate Phase 2A Closeout
+
+| Ticket | Status | Build | tsc | Force | Regression |
+|--------|--------|-------|-----|-------|------------|
+| SYN-09 | [x] Complete | PASS (7 routes) | clean | NO | session_timeout.spec.md (7 TCs) |
+| SYN-10 | [x] Complete | PASS (7 routes) | clean | NO | CSRF_Audit_Phase2A.md (audit doc; no separate spec per Briefing) |
+| SYN-08 | [x] Complete | PASS (7 routes) | clean | NO | login_rate_limit.spec.md (12 TCs) |
+| SYN-11 | [x] Complete | PASS (7 routes) | clean | NO | audit_log_writes.spec.md (10 TCs) |
+
+**Source changes (this phase):**
+- `ticket-system/src/app/actions/auth.ts` — ~80 lines added (rate-limit helpers + session timeout helper + gate/record/clear wiring); function signatures preserved
+- `ticket-system/src/app/actions/tickets.ts` — ~50 lines added (audit imports + 3 wrapped call sites + pre-count for bulk-clear); function signatures preserved
+- `ticket-system/src/lib/audit.ts` — created, 56 lines (helper + safeStringify)
+- `ticket-system/.env.example` — 2 new env blocks (RATE_LIMIT_*, SESSION_TIMEOUT_*) with comments; `.env` untouched
+
+**Doc changes (this phase):**
+- `Development/Web_repair_center/08_AuditReport/CSRF_Audit_Phase2A.md` (new, 169 lines)
+- `Development/Web_repair_center/ErrorCatalog.md` (new entry `ERR_AUTH_RATE_LIMITED = -1010`; audit-trail row appended)
+- `Development/Web_repair_center/09_TestCase/_regression/session_timeout.spec.md` (new)
+- `Development/Web_repair_center/09_TestCase/_regression/login_rate_limit.spec.md` (new)
+- `Development/Web_repair_center/09_TestCase/_regression/audit_log_writes.spec.md` (new)
+- All 4 ticket files: `[ ] PENDING` → `[x] Complete`
+
+**DB changes (this phase):**
+- None (consumed MON-10 schema only — no new tables, no migrations)
+
+**Probes created + deleted:**
+- None this phase (no debugging required — clean build/typecheck on all 4 tickets)
+
+**Constraints honored:**
+- No branch user passwords touched
+- No admin password touched
+- `login()` / `logout()` / `getSession()` signatures unchanged
+- Cookie name `user_session` unchanged; only `sameSite` ADDED and `maxAge` made role-driven
+- No external rate-limiting service added (Phase 2B scope)
+- No audit log read UI added (Phase 2D scope)
+- No raw git; no `--force`; no `.env` writes
+- No UI/frontend code touched (Arcade's domain)
+- No DB schema changes (Monolith's domain)
+
+**Two Phase 2B follow-up recommendations (filed as observations in CSRF audit doc):**
+- F-03: Server-action role gate — every mutating action verifies caller role inside the function body
+- F-04: `/api/proxy-image` SSRF allow-list — restrict outbound fetch to known hosts
+
+**Hold for Wave 4 — do NOT advance to Phase 2B.** Syndicate's Phase 2A work is complete. Awaiting OVS-05 UX smoke + User Journey Walkthrough, then Commander Phase 2A acceptance.

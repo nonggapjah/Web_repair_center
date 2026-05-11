@@ -43,9 +43,9 @@ ERR_<SUBSYSTEM>_<DESCRIPTION>
 
 | Code | Constant | User Message (TH) | Cause | Remediation |
 |------|----------|-------------------|-------|-------------|
-| _(none yet — see Phase 0.5 to add ERR_AUTH_*)_ | | | | |
+| `-1010` | `ERR_AUTH_RATE_LIMITED` | "ลองเข้าระบบล้มเหลวหลายครั้งเกินไป กรุณารอ N นาที" | `login()` พบจำนวน `FailedLoginAttempt` ภายใน `RATE_LIMIT_WINDOW_MIN` ≥ `RATE_LIMIT_MAX_ATTEMPTS` และ attempt ล่าสุดยังอยู่ใน `RATE_LIMIT_LOCKOUT_MIN` → ปฏิเสธก่อนเช็ค password เพื่อป้องกัน brute-force / account guessing | รอจนจบช่วง lockout (defaults: 15 นาที) หรือ admin ลบ row ของ Username นั้นใน `FailedLoginAttempt` ผ่าน Supabase SQL Phase 2D จะมี admin unlock UI |
 
-**Reserved for Phase 0.5:**
+**Reserved for future:**
 - `ERR_AUTH_USER_NOT_FOUND` — username ไม่มีใน DB
 - `ERR_AUTH_INVALID_CREDENTIALS` — password ผิด
 - `ERR_AUTH_HASH_MISMATCH` — password hash compare failed (post-migration)
@@ -116,3 +116,4 @@ ERR_<SUBSYSTEM>_<DESCRIPTION>
 |------|--------|----|
 | 09-05-2026 | Catalog created (skeleton, no entries yet) | MT (Phase 0 baseline) |
 | 11-05-2026 | Added `ERR_TICKET_NO_USER_FOR_BRANCH = -2001` — MON-09 createTicket() silent user creation fix | SC (Monolith) |
+| 11-05-2026 | Added `ERR_AUTH_RATE_LIMITED = -1010` — SYN-08 brute-force protection on login | AX (Syndicate) |

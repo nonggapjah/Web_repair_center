@@ -1,6 +1,8 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, unstable_noStore as noStore } from "next/cache";
+import { logAudit } from "@/lib/audit";
+import { getSession } from "./auth";
 
 export async function createTicket(formData: {
     product: string;
@@ -135,6 +137,13 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
             updateData.UserSignature = signatureBase64;
         }
 
+        // SYN-11: capture Before snapshot for audit (sanitized — no signatures, no PII beyond status/assignment)
+        const beforeSnap = {
+            CurrentStatus: ticket.CurrentStatus,
+            Technician: ticket.Technician,
+            ActualDate: ticket.ActualDate
+        };
+
         await prisma.$transaction([
             prisma.repairTicket.update({
                 where: { TicketID: ticketId },
@@ -158,6 +167,24 @@ export async function updateTicketStatus(ticketId: string, status: string, note?
                 }
             })
         ]);
+
+        // SYN-11: audit. logAudit() is fail-soft — never throws, never blocks.
+        // Action `ticket.status.update` covers both status flips AND technician (re)assignment
+        // since both flow through this single function; entityType+entityId identify the row.
+        const session = await getSession();
+        await logAudit({
+            userId: session?.userId,
+            action: "ticket.status.update",
+            entityType: "RepairTicket",
+            entityId: ticketId,
+            before: beforeSnap,
+            after: {
+                CurrentStatus: status,
+                Technician: technician,
+                ActualDate: actualDate ?? null,
+                Note: note ?? null
+            }
+        });
 
         return { success: true };
     } catch (error) {
@@ -200,6 +227,19 @@ export async function addTicketComment(ticketId: string, message: string, imageU
                 }
             });
         }
+
+        // SYN-11: audit. Record who posted what on which ticket. Message stored truncated
+        // to mirror what the notification shows (avoids storing potentially sensitive long text twice).
+        await logAudit({
+            userId: actualUserId,
+            action: "ticket.comment.add",
+            entityType: "RepairTicket",
+            entityId: ticketId,
+            after: {
+                hasImage: !!imageUrl,
+                messagePreview: message.length > 80 ? message.substring(0, 80) + '...' : message
+            }
+        });
 
         return { success: true };
     } catch (error) {
@@ -249,9 +289,23 @@ export async function markAllNotificationsAsViewed(branchId: string, role: strin
 export async function markAllNotificationsRead(branchId: string, role: string) {
     try {
         const dbRole = role === 'Admin' ? 'Admin' : 'Branch';
-        await prisma.notification.deleteMany({
-            where: { TargetRole: dbRole, TargetUser: dbRole === 'Admin' ? null : branchId }
+        // SYN-11: capture row count for audit (Before snapshot)
+        const targetWhere = { TargetRole: dbRole, TargetUser: dbRole === 'Admin' ? null : branchId };
+        const beforeCount = await prisma.notification.count({ where: targetWhere });
+
+        await prisma.notification.deleteMany({ where: targetWhere });
+
+        // SYN-11: bulk delete is a destructive admin/branch action — audit it.
+        const session = await getSession();
+        await logAudit({
+            userId: session?.userId,
+            action: "notification.bulkClear",
+            entityType: "Notification",
+            entityId: dbRole === 'Admin' ? 'Admin:*' : `Branch:${branchId}`,
+            before: { count: beforeCount, targetRole: dbRole, targetUser: targetWhere.TargetUser },
+            after: { count: 0 }
         });
+
         return { success: true };
     } catch (err) {
         return { success: false };

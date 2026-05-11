@@ -88,3 +88,40 @@ model Notification {
   IsRead     Boolean  @default(false)
   CreatedAt  DateTime @default(now())
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 2A — Security Hardening (MON-10)
+// Append-only event/state stores for admin accountability and brute-force
+// protection. NO FOREIGN KEYS to User: (1) AuditLog must survive user
+// deletion to preserve the audit trail, (2) FailedLoginAttempt.Username
+// may refer to a non-existent account (attempts are recorded before
+// authentication resolves), (3) the User model is in flux pending the
+// Phase 2D Password column drop. String refs only.
+// ────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  LogID      String   @id @default(cuid())
+  UserID     String? // who performed the action (nullable for system-originated events)
+  Action     String // e.g. "ticket.status.update", "ticket.technician.assign", "user.role.change"
+  EntityType String? // e.g. "RepairTicket", "User"
+  EntityID   String? // e.g. ticketId, userId — the row that was acted upon
+  Before     String? // JSON snapshot before mutation (nullable for create actions)
+  After      String? // JSON snapshot after mutation (nullable for delete actions)
+  IPAddress  String? // best-effort, captured from request headers when available
+  UserAgent  String? // best-effort, captured from request headers when available
+  Timestamp  DateTime @default(now())
+
+  @@index([UserID])
+  @@index([Action])
+  @@index([EntityType, EntityID])
+  @@index([Timestamp])
+}
+
+model FailedLoginAttempt {
+  AttemptID   String   @id @default(cuid())
+  Username    String // username tried (case-preserved; may not match any existing User row)
+  IPAddress   String? // best-effort, captured from request headers when available
+  AttemptedAt DateTime @default(now())
+
+  @@index([Username, AttemptedAt]) // composite — hottest read path for windowed-count rate-limit queries
+}

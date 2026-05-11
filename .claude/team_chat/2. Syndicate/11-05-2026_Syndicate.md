@@ -109,3 +109,128 @@ Ticket SYN-06 is COMPLETE. Teams waiting on this ticket may now proceed:
 - No `--force` used anywhere in Phase 1 Syndicate work.
 
 ---
+
+## Session Start — Phase 2A Security Hardening Sprint
+**Date:** 11-05-2026
+**Project:** Web_repair_center
+**Phase:** 2A — Security Hardening
+**Mode:** A — Spawned by AM as subagent (Wave 3 — sequential)
+**Auth:** Hold for Wave 4 (OVS-05 UX smoke). Do NOT advance to Phase 2B.
+
+**DR:** Four tickets in order — SYN-09 first (simplest, no dep), SYN-10 (independent), SYN-08 (uses MON-10 FailedLoginAttempt), SYN-11 (uses MON-10 AuditLog). All sequential, all touch auth.ts/tickets.ts. Build gate after every ticket. Deploying solution now.
+
+**AX:** Predecessor state confirmed — Next.js 16.2.6 (SYN-07 force-bump COMPLETE), `AuditLog` + `FailedLoginAttempt` models present in schema with proper indexes, prisma client knows both (camelCase `prisma.auditLog` / `prisma.failedLoginAttempt`). auth.ts L2 read complete: `login()` returns `{success, error}` on fail, `{success, role, redirect}` on success; cookie set at line 69 with hardcoded `maxAge: 60*60*24`. tickets.ts L2 read complete — admin-action candidates identified: `updateTicketStatus` (status mutation + AdminSignature/UserSignature side effect), `addTicketComment` (admin/branch dual path, message persisted + notification), and `createTicket` (already has error-code observability from MON-09).
+
+**LX:** Pre-flight plan locked. Single-session execution justified — all 4 tickets within one file scope (auth.ts) or one helper module plus 1 surgical apply file (tickets.ts). No 10+ file scan, no 3+ independent tickets in parallel — sequential dependency on shared file mandates single agent.
+
+**WT:** Verification gates queued — `tsc --noEmit` + `npm run build` after every ticket. Hard constraints noted: cookie name `user_session` unchanged, login/logout/getSession signatures unchanged, password fields untouched, no `--force`. Regression files queued: session_timeout, login_rate_limit, audit_log_writes. SYN-10 documented via 08_AuditReport/CSRF_Audit_Phase2A.md (no separate regression file per Phase Briefing).
+
+---
+
+## SYN-09 — Role-based session timeout [x] Complete
+
+**DR:** First ticket cleared. Role-driven cookie max-age live. Build green.
+
+**AX:**
+- Added `SESSION_TIMEOUT_DEFAULTS` map + `getSessionTimeoutForRole()` helper in `auth.ts` (constants block, top of module — 16 LOC delta, zero impact on existing functions).
+- Swapped `maxAge: 60 * 60 * 24` (line 72) → `maxAge: getSessionTimeoutForRole(user.Role)`. Cookie shape otherwise unchanged.
+- Env override path: `SESSION_TIMEOUT_ADMIN_SEC` / `SESSION_TIMEOUT_TECHNICIAN_SEC` / `SESSION_TIMEOUT_USER_SEC`. Invalid env (NaN, ≤0) falls back to default — defensive parse via `Number.isFinite && >0`.
+- Unknown role would fall through to `SESSION_TIMEOUT_DEFAULTS.User` (24h) — safe default, never zero.
+- `.env.example` block appended with comments. `.env` untouched per Boundaries.
+- Function signatures of `login` / `logout` / `getSession` unchanged.
+
+**LX:** `.env.example` reads cleanly in two new sections (Login Rate Limit pending SYN-08; Session Timeout). Comment lines explain the "why" of each default.
+
+**WT:** `npx tsc --noEmit` exit clean. `npx next build` PASS — 7 routes (`/`, `/admin/dashboard`, `/api/proxy-image`, `/login`, `/_not-found`, `/technician/dashboard`, `/user/dashboard`, `/user/new-ticket`). Regression file added: `09_TestCase/_regression/session_timeout.spec.md` (7 TCs — Admin/Tech/User defaults, env override, invalid-env fallback, cookie shape, function signature integrity).
+
+---
+
+## SYN-10 — CSRF audit + cookie SameSite [x] Complete
+
+**DR:** CSRF posture documented end-to-end. SameSite=Lax live on session cookie.
+
+**AX:**
+- Added `sameSite: "lax"` to `cookieStore.set("user_session", ...)` in `auth.ts`. Single-line diff — `httpOnly`, `secure`, `path`, name unchanged per Boundaries.
+- Audit confirmed: every state-mutating export across `auth.ts` (3) + `tickets.ts` (10, of which 6 mutate) flows through `"use server"`. Only custom REST route is `proxy-image` (GET-only, no DB write, no session read — CSRF n/a).
+- Two out-of-scope observations filed in the audit doc as follow-ups for Phase 2B: (F-03) Server Actions do not verify caller role inside the function body, (F-04) `/api/proxy-image` accepts arbitrary URLs with no allow-list (SSRF, not CSRF). Filed as observations only — not actioned this phase.
+
+**LX:** Audit report `Development/Web_repair_center/08_AuditReport/CSRF_Audit_Phase2A.md` reads as 9-section structured document — Executive Summary, Server Actions table, REST route audit, cookie before/after, Findings, Verification steps, Sign-off, Follow-ups, Audit Trail. Lives next to ErrorCatalog as project artifact.
+
+**WT:** Audit doc length 169 lines. `npx tsc --noEmit` clean. `npx next build` PASS — 7 routes preserved. Sign-off recorded in §7 of audit doc. Zero CSRF vulnerabilities in current surface; SSRF + missing role gates flagged with explicit Phase 2B follow-up recommendations.
+
+---
+
+## SYN-08 — Brute-force rate limit on login [x] Complete
+
+**DR:** Login attempt floor enforced. ERR_AUTH_RATE_LIMITED in catalog.
+
+**AX:**
+- Added `RATE_LIMIT_DEFAULTS` (10/15/15) + `rateLimitConfig()` env parser + 3 helpers: `checkRateLimit(username)` returns lockout decision; `recordFailedAttempt(username)` inserts ledger row; `clearFailedAttempts(username)` wipes on success.
+- Wired into `login()`:
+  1. **Gate** — `checkRateLimit()` runs as FIRST DB op, BEFORE user lookup. Prevents enumeration-via-timing because unknown users count toward lockout too.
+  2. **Record** — `recordFailedAttempt()` called on every failure branch: `!user`, `!password`, bcrypt mismatch, plaintext mismatch.
+  3. **Clear** — `clearFailedAttempts()` called immediately before cookie set, after auth succeeds on either bcrypt or plaintext path.
+- Storage: `prisma.failedLoginAttempt.findMany` with `take: maxAttempts` (10) + `orderBy AttemptedAt desc` — composite index `[Username, AttemptedAt]` from MON-10 makes this an index range scan, not a seq scan.
+- Lockout semantics: when count ≥ MAX, check whether `latest_attempt + LOCKOUT_MIN` is still in the future. If yes, deny with remaining-minutes message. If no (window elapsed since last fail), allow — gives natural reset without a cron job.
+- Fail-soft: `recordFailedAttempt`/`clearFailedAttempts` wrap in try/catch — ledger DB error never blocks login UX, just emits `[AUTH] failed to record/clear …` to server log (State Transparency Rule honored — visible reason emitted, no silent skip).
+- `login()` / `logout()` / `getSession()` signatures unchanged.
+- Added `ERR_AUTH_RATE_LIMITED = -1010` to `ErrorCatalog.md` with Thai user message, cause, and remediation note. Audit Trail row appended.
+- `.env.example` updated with `RATE_LIMIT_*` placeholder block + comments. `.env` untouched.
+
+**LX:** Error catalog entry includes user-facing Thai message with placeholder for `N` minutes — frontend displays the server-resolved minutes directly. Audit Trail table now has 3 dated rows (catalog created, MON-09, SYN-08) — clean chronological record.
+
+**WT:** `npx tsc --noEmit` clean. `npx next build` PASS — 7 routes. Regression file added: `09_TestCase/_regression/login_rate_limit.spec.md` (12 TCs covering under-cap pass, at-cap lockout, cleared-on-success, outside-window, time-elapsed unlock, unknown-user counting, missing-password counting, signature preservation, env override, invalid env fallback, fail-soft ledger errors).
+
+### Dependency Signal
+Ticket SYN-08 is COMPLETE. Consumes MON-10 `FailedLoginAttempt` schema. No team is currently waiting on SYN-08 outputs within Phase 2A.
+
+---
+
+## SYN-11 — Audit logging helper + apply to admin actions [x] Complete
+
+**DR:** Audit pipeline online — 3 admin actions wrapped, fail-soft guarantee verified.
+
+**AX:**
+- Created `ticket-system/src/lib/audit.ts` — `logAudit(entry: AuditEntry): Promise<void>` + `safeStringify(v)` helper. Full try/catch wrap; never throws by construction.
+- Public surface: `AuditEntry` interface (userId, action, entityType, entityId, before, after, ipAddress, userAgent). Snake-to-PascalCase mapping handled inside the helper so call sites stay clean.
+- L2 scan of `tickets.ts` enumerated all 10 exports. Selected 3 admin/state-changing actions for wrapping:
+  1. **`updateTicketStatus()`** → `action: "ticket.status.update"`. Captures `{ CurrentStatus, Technician, ActualDate }` Before snapshot pre-transaction; After snapshot includes status, technician, actualDate, and note. AdminSignature/UserSignature explicitly excluded from snapshots (sensitive — per Boundaries).
+  2. **`addTicketComment()`** → `action: "ticket.comment.add"`. After payload includes `hasImage` flag + 80-char message preview (matches notification truncation pattern — avoids storing potentially long PII twice). Uses already-resolved `actualUserId` from the function for the audit `userId`.
+  3. **`markAllNotificationsRead()`** → `action: "notification.bulkClear"`. Pre-count via `prisma.notification.count` BEFORE the destructive `deleteMany`; Before/After captures the row count. Caller's `userId` pulled from `getSession()`.
+- `userId` resolution: `getSession()` is awaited inside each action — uses the existing server action; no new infra.
+- Wrapped calls are `await logAudit(...)` (not fire-and-forget) — guarantees the call enters the helper's try/catch even on path divergence. Performance cost: ~1 extra DB roundtrip per audited mutation, acceptable.
+- Sensitive fields scrubbed: no `Password`, `PasswordHash`, `AdminSignature`, `UserSignature` ever passed into `before` or `after`. Verified by code-level inspection of all 3 call sites.
+- No `ErrorCatalog.md` entry needed for SYN-11 — helper is fail-soft by design (per ticket §63).
+
+**LX:** Action naming convention dotted-lowercase: `ticket.status.update`, `ticket.comment.add`, `notification.bulkClear`. Future Phase 2D read UI can group/filter by `Action` prefix (`ticket.*` vs `notification.*`) without parser changes. Audit table indexes from MON-10 (`UserID`, `Action`, `[EntityType, EntityID]`, `Timestamp`) align with anticipated read patterns.
+
+**WT:** `npx tsc --noEmit` clean. `npx next build` PASS — 7 routes. Regression file added: `09_TestCase/_regression/audit_log_writes.spec.md` (10 TCs — 3 happy-path writes, fail-soft on DB error, circular-ref handling, no-throw boundary, sanitization audit, return-shape preservation, action-name convention, userId resolution).
+
+Pre-existing diagnostic: `revalidatePath` import in `tickets.ts` was already unused before SYN-11 touched the file. Out of scope to remove — flagged in the regression spec Notes as a future cleanup observation.
+
+---
+
+## Phase 2A Syndicate Closeout
+
+**DR:** All four Syndicate tickets [x] Complete. Build PASS after each. Holding for Wave 4 (OVS-05 UX smoke) per Phase Briefing.
+
+**Cross-cutting state:**
+- `auth.ts` lines added: ~80 (timeout helper + rate-limit helpers + wired gate/record/clear); function signatures preserved.
+- `tickets.ts` lines added: ~50 (imports + 3 audit call sites + 1 pre-count); function signatures preserved.
+- `src/lib/audit.ts` created: 56 LOC.
+- `.env` never touched. `.env.example` updated with two new env blocks (RATE_LIMIT_*, SESSION_TIMEOUT_*).
+- ErrorCatalog gained 1 new code: `ERR_AUTH_RATE_LIMITED = -1010`.
+- New artifact: `08_AuditReport/CSRF_Audit_Phase2A.md` (169 lines).
+- 3 regression specs added: `session_timeout.spec.md`, `login_rate_limit.spec.md`, `audit_log_writes.spec.md`.
+
+**Build state at handoff:**
+- `npx next build` PASS — 7 routes preserved across all 4 tickets.
+- `npx tsc --noEmit` clean.
+- No `--force`, no raw git, no `.env` writes, no LINE refs, no UI changes.
+- INDEV §6 debug probes: none added or removed this phase (no debugging session needed — clean implementation, no bugs surfaced during build/typecheck).
+
+**Two follow-up tickets recommended for Phase 2B (filed as observations in CSRF audit doc, not actioned):**
+- Server-action role gate (F-03)
+- Proxy-image SSRF allow-list (F-04)
+
+---

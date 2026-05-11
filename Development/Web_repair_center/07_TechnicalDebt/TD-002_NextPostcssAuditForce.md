@@ -4,7 +4,7 @@
 **Date:** 11-05-2026
 **Origin ticket:** SYN-05 — npm audit fix (Phase 1)
 **Severity:** 1 high (next) + 1 moderate (postcss)
-**Status:** OPEN — awaiting Commander approval to use `npm audit fix --force`
+**Status:** RESOLVED 11-05-2026 (SYN-07, Phase 2A) — `npm audit fix --force` applied, Next.js bumped 16.1.6 → 16.2.6, build + tsc + 7 routes verified PASS. 2 postcss-chain moderates remain (further fix would downgrade Next.js to 9.x — refused). High CSRF-bypass vuln (GHSA-mq59-m269-xvcx) directly relevant to SYN-10 audit — now patched.
 
 ## Summary
 
