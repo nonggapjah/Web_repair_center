@@ -22,8 +22,8 @@ Web_repair_center คือระบบศูนย์แจ้งซ่อม�
 | Database | PostgreSQL via Supabase | (managed) |
 | ORM | Prisma | ^5.22.0 |
 | Auth | Custom cookie session (NO NextAuth) | — |
-| Mobile integration | LINE LIFF | @line/liff ^2.27.3 |
-| Notifications | LINE Messaging API + in-app | — |
+| Mobile integration | (LINE LIFF removed 11-05-2026 — SYN-06) | — |
+| Notifications | In-app only (LINE Messaging API removed 11-05-2026 — SYN-06) | — |
 | Storage | Supabase Storage | @supabase/supabase-js ^2.100.0 |
 | Image format | HEIC support | heic2any ^0.0.4 |
 | Drag & drop | @hello-pangea/dnd | ^18.0.1 |
@@ -155,19 +155,19 @@ prisma.notification.create({ TargetRole: 'Admin', ... }) — in-app notification
 #### Key Functions / Classes
 | Name | File | What it does |
 |------|------|--------------|
-| `createTicket(formData)` | actions/tickets.ts:6 | Create ticket + admin notification |
+| `createTicket(formData)` | actions/tickets.ts:5 | Create ticket + admin notification. **MON-09 (11-05-2026):** returns `{success:false, error:"ไม่พบผู้ใช้งานของสาขานี้ในระบบ..."}` + emits `ERR_TICKET_NO_USER_FOR_BRANCH (-2001)` if branch has no User row (no more silent auto-create) |
 | `getBranchTickets(branchId)` | actions/tickets.ts:63 | List tickets for a branch (with comments + history) |
 | (more functions exist past line 80 — L2 scan needed) | tickets.ts:80+ | (UNREAD in L1) |
 
 #### Critical Invariants
 - Status transitions: `Open` → `Planed` → ... (default `Planed` ตาม schema, but `createTicket` sets `Open` — schema/code mismatch?)
 - Priority values: `Medium` (default) — เปลี่ยนได้แต่ไม่ documented
-- Auto-create user side-effect: createTicket อาจจะสร้าง User record ถ้าไม่มี — silent
+- ~~Auto-create user side-effect: createTicket อาจจะสร้าง User record ถ้าไม่มี — silent~~ — **REMOVED 11-05-2026 (MON-09)**. Contract change: createTicket NEVER creates User rows. Branch provisioning is the responsibility of `seed_production.mjs` (or future admin tooling).
 
 #### Known Quirks / Gotchas
-- 🐛 **LINE Notify disabled** ใน createTicket (line 4 comment-out) — branches ไม่ได้รับ notification ผ่าน LINE
-- 🐛 **Schema/code mismatch** — schema default status = `'Planed'` (typo? planned?) แต่ createTicket set เป็น `'Open'`
-- 🐛 **Silent user creation** — createTicket auto-creates User if missing (tickets.ts:19-27) ซึ่งเป็น side-effect ที่ไม่คาดคิด
+- ~~🐛 **LINE Notify disabled** ใน createTicket (line 4 comment-out)~~ — **RESOLVED 11-05-2026 (SYN-06: LINE removed entirely)**
+- ~~🐛 **Schema/code mismatch** — schema default status = `'Planed'` (typo? planned?) แต่ createTicket set เป็น `'Open'`~~ — **RESOLVED 11-05-2026 (MON-08: schema default sync'd to `'Open'`, existing rows preserved per Phase 1 scope)**
+- ~~🐛 **Silent user creation** — createTicket auto-creates User if missing (tickets.ts:19-27)~~ — **RESOLVED 11-05-2026 (MON-09: replaced with explicit error return `ERR_TICKET_NO_USER_FOR_BRANCH = -2001`. Static guard: zero `user.create` calls under `src/`. Regression test: `09_TestCase/_regression/createTicket_no_silent_user.spec.md`)**
 
 ---
 
@@ -210,59 +210,37 @@ prisma.notification.create({ TargetRole: 'Admin', ... }) — in-app notification
 
 ---
 
-### Notifications
-**Source files:** `src/lib/lineNotify.ts`, `src/components/NotificationBell.tsx`, Prisma `Notification` model
+### Notifications (in-app only)
+**Source files:** `src/components/NotificationBell.tsx`, Prisma `Notification` model
 **Scan tier completed:** L1
-**Last reviewed:** 09-05-2026
+**Last reviewed:** 11-05-2026
 
 #### Purpose
-ระบบแจ้งเตือน 2 ทาง: (1) ในแอป — เก็บใน Notification table, แสดงผ่าน NotificationBell component (2) LINE — ส่งผ่าน LINE Messaging API (push/multicast) ไปยัง LINE_TARGET_ID
+ระบบแจ้งเตือนในแอป — เก็บใน Notification table, แสดงผ่าน NotificationBell component
 
 #### Architecture / Data Flow
 ```
 [Server-side trigger]
-  → sendLineNotify(message)
-    → token = process.env.LINE_CHANNEL_ACCESS_TOKEN
-    → targets = process.env.LINE_TARGET_ID.split(',')
-    → POST https://api.line.me/v2/bot/message/{push|multicast}
-    → [silent fail if token missing — only console.warn]
-
-[In-app]
   → prisma.notification.create({ TargetRole, TargetUser, Title, Message, TicketID })
   → NotificationBell polls / fetches → displays badge
 ```
 
 #### Critical Invariants
-- LINE_CHANNEL_ACCESS_TOKEN required for LINE delivery
-- LINE_TARGET_ID is comma-separated user IDs (multicast if > 1)
 - TargetRole = `'Admin'` | `'Branch'` (or null)
 
 #### Known Quirks / Gotchas
-- 🐛 **Silent failure** — lineNotify.ts:5-8 returns silently with only console.warn if token missing. Per §2 Silent Failure Rule = CRITICAL — ต้องเพิ่ม structured error
-- ⚠️ **LINE Notify call commented out** ใน createTicket (tickets.ts:4) — feature dead code
+- LINE Messaging API channel **REMOVED 11-05-2026** (SYN-06). `src/lib/lineNotify.ts` deleted, all `sendLineNotify(...)` call sites stripped from `tickets.ts`.
 
 ---
 
-### LIFF Integration
-**Source files:** `src/components/LiffProvider.tsx`
-**Scan tier completed:** L1
-**Last reviewed:** 09-05-2026
-
-#### Purpose
-Bootstrapping LINE LIFF SDK ในฝั่ง client — ใช้ NEXT_PUBLIC_LIFF_ID. ใช้สำหรับเปิดแอปผ่าน LINE app
-
-#### Critical Invariants
-- NEXT_PUBLIC_LIFF_ID ต้องตั้งค่าก่อน LIFF จะ init
+### LIFF Integration — **REMOVED 11-05-2026** (SYN-06)
+**Source files (deleted):** `src/components/LiffProvider.tsx`
+LINE LIFF login surface removed entirely from `src/app/login/page.tsx` and `src/app/layout.tsx`. `@line/liff` dependency dropped from `package.json`. `NEXT_PUBLIC_LIFF_ID` removed from `.env.example`.
 
 ---
 
-### Webhook
-**Source files:** `src/app/api/webhook/route.ts` (25 LOC)
-**Scan tier completed:** L1
-**Last reviewed:** 09-05-2026
-
-#### Purpose
-HTTP endpoint สำหรับรับ webhook (น่าจะจาก LINE Messaging API หรือ external system) — L2 scan needed
+### Webhook — **REMOVED 11-05-2026** (SYN-06)
+**Source files (deleted):** `src/app/api/webhook/route.ts` (was 25 LOC). Empty `src/app/api/webhook/` directory removed. Endpoint only logged inbound LINE event IDs to console — no DB writes or state side effects.
 
 ---
 
@@ -314,7 +292,7 @@ Notification (NotifID PK, TargetRole, TargetUser, Title, Message, TicketID, IsRe
 #### Known Quirks / Gotchas
 - ⚠️ Password plaintext (security), default `'1234'`
 - ⚠️ Password ไม่มี `@unique` หรือ index (ok เพราะ password)
-- 🐛 Default CurrentStatus = `'Planed'` (typo? น่าจะ "Planned") — code ใช้ `'Open'` แทน → mismatch
+- ~~🐛 Default CurrentStatus = `'Planed'` (typo? น่าจะ "Planned") — code ใช้ `'Open'` แทน → mismatch~~ — **RESOLVED 11-05-2026 (MON-08: schema default = `'Open'` — verified via probe: postgres column default `'Open'::text`, 0 existing `'Planed'` rows, all 20 ticket rows = `'Open'`; no data migration)**
 - Branch.BranchName ไม่ unique — สาขาชื่อซ้ำได้
 - ad-hoc scripts ที่ root: `check_db.ts`, `clear_old_tickets.ts`, `delete_90xx.mjs` → ไม่ใช่ part ของ build แต่ commit ไว้ — ควร flag เป็น tech debt
 
@@ -326,9 +304,6 @@ Notification (NotifID PK, TargetRole, TargetUser, Title, Message, TicketID, IsRe
 |----------|---------|---------|
 | `DATABASE_URL` | prisma/schema.prisma | Pooled Postgres connection |
 | `DIRECT_URL` | prisma/schema.prisma | Direct connection for migrations |
-| `NEXT_PUBLIC_LIFF_ID` | components/LiffProvider.tsx | LINE LIFF app ID |
-| `LINE_CHANNEL_ACCESS_TOKEN` | lib/lineNotify.ts | LINE Messaging API token |
-| `LINE_TARGET_ID` | lib/lineNotify.ts | Comma-separated LINE user IDs |
 | `NEXT_PUBLIC_SUPABASE_URL` | lib/supabase.ts | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | lib/supabase.ts | Supabase anon key |
 | `NODE_ENV` | auth.ts, lib/prisma.ts | Standard Node env |
@@ -356,10 +331,10 @@ L2 ไม่จำเป็นสำหรับ Phase 0/0.5 — Phase 0 เป�
 |---|----------|-------|-----------|
 | 1 | 🔴 CRITICAL | Plaintext password storage + comparison | Auth |
 | 2 | 🔴 CRITICAL | Default password `"1234"` in schema | Auth/DB |
-| 3 | 🟡 HIGH | LINE Notify silent failure (no token = silent skip) | Notifications |
-| 4 | 🟡 HIGH | Schema/code status mismatch (`Planed` vs `Open`) | Tickets/DB |
-| 5 | 🟢 MEDIUM | LINE Notify in createTicket commented-out (dead code) | Notifications |
-| 6 | 🟢 MEDIUM | Silent user creation in createTicket | Tickets |
+| 3 | ~~🟡 HIGH~~ | ~~LINE Notify silent failure~~ — **RESOLVED 11-05-2026 (SYN-06: LINE removed)** | Notifications |
+| 4 | ~~🟡 HIGH~~ | ~~Schema/code status mismatch (`Planed` vs `Open`)~~ — **RESOLVED 11-05-2026 (MON-08)** | Tickets/DB |
+| 5 | ~~🟢 MEDIUM~~ | ~~LINE Notify in createTicket commented-out~~ — **RESOLVED 11-05-2026 (SYN-06)** | Notifications |
+| 6 | ~~🟢 MEDIUM~~ | ~~Silent user creation in createTicket~~ — **RESOLVED 11-05-2026 (MON-09)** | Tickets |
 | 7 | 🟢 MEDIUM | admin/dashboard 765 LOC approaching rewrite threshold | Admin Dashboard |
 | 8 | 🟢 MEDIUM | Stale comment "MSSQL" in auth.ts (actually Postgres) | Auth |
 | 9 | 🔵 LOW | Ad-hoc scripts at ticket-system/ root not gitignored | Tooling |

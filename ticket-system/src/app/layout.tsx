@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { LiffProvider } from '@/components/LiffProvider';
 import { NavBar } from '@/components/NavBar';
 
 export const metadata: Metadata = {
@@ -16,10 +15,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <LiffProvider>
-          <NavBar />
-          {children}
-        </LiffProvider>
+        <NavBar />
+        {children}
       </body>
     </html>
   )

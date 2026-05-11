@@ -59,7 +59,7 @@ ERR_<SUBSYSTEM>_<DESCRIPTION>
 
 | Code | Constant | User Message (TH) | Cause | Remediation |
 |------|----------|-------------------|-------|-------------|
-| _(none yet)_ | | | | |
+| `-2001` | `ERR_TICKET_NO_USER_FOR_BRANCH` | "ไม่พบผู้ใช้งานของสาขานี้ในระบบ กรุณาติดต่อแอดมิน" | `createTicket()` ไม่พบ User row (Role='User') สำหรับ `branchId` ที่ส่งมา ก่อนหน้านี้ระบบสร้าง User เงียบๆ ด้วย username = `staff_<branchId>` (no password) → security risk + silent state corruption | ใช้ `seed_production.mjs` provision User row ทุกสาขาก่อน rerun seed ถ้ามี branch ใหม่เพิ่ม **ห้าม** auto-create User ใน server action |
 
 **Examples for future use:**
 - `ERR_DATA_TICKET_NOT_FOUND` — ticketId ไม่มีใน DB
@@ -115,3 +115,4 @@ ERR_<SUBSYSTEM>_<DESCRIPTION>
 | Date | Change | By |
 |------|--------|----|
 | 09-05-2026 | Catalog created (skeleton, no entries yet) | MT (Phase 0 baseline) |
+| 11-05-2026 | Added `ERR_TICKET_NO_USER_FOR_BRANCH = -2001` — MON-09 createTicket() silent user creation fix | SC (Monolith) |

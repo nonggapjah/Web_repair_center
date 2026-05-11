@@ -1,7 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, unstable_noStore as noStore } from "next/cache";
-// import { sendLineNotify } from "@/lib/lineNotify";
 
 export async function createTicket(formData: {
     product: string;
@@ -12,18 +11,25 @@ export async function createTicket(formData: {
     requestDate?: string;
 }) {
     try {
-        let user = await prisma.user.findFirst({
+        const user = await prisma.user.findFirst({
             where: { BranchID: formData.branchId, Role: 'User' }
         });
 
+        // MON-09 (11-05-2026): explicit error path replaces silent user-create side effect.
+        // Error code: ERR_TICKET_NO_USER_FOR_BRANCH = -2001 (see ErrorCatalog.md).
+        // Rationale: branch users are provisioned by seed_production.mjs / admin tooling,
+        // never by a server action. Auto-creating a User row here masked data
+        // inconsistencies (deleted/missing branch user) behind a "successful" UX while
+        // leaving the new account password-less (default plaintext "1234"). §2 Silent
+        // Failure Rule — fail loudly with an observable, user-facing reason.
         if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    Username: `staff_${formData.branchId}`,
-                    BranchID: formData.branchId,
-                    Role: 'User'
-                }
-            });
+            console.error(
+                `[createTicket] ERR_TICKET_NO_USER_FOR_BRANCH (-2001): no User row found for branchId=${formData.branchId} — refusing to auto-create. Provision via seed_production.mjs.`
+            );
+            return {
+                success: false,
+                error: "ไม่พบผู้ใช้งานของสาขานี้ในระบบ กรุณาติดต่อแอดมิน"
+            };
         }
 
         const ticket = await prisma.repairTicket.create({
@@ -40,10 +46,7 @@ export async function createTicket(formData: {
             }
         });
 
-        // 1. Send LINE Notify (Disabled for now)
-        // await sendLineNotify(`🔔 แจ้งซ่อมใหม่!\nสาขา: ${formData.branchId}\nหมวดหมู่: ${formData.symptom}\nอุปกรณ์: ${formData.product}\nขอเข้าทำ: ${formData.requestDate || '-'}\nรายละเอียด: ${formData.description}`);
-
-        // 2. Create In-App Notification for Admin
+        // Create In-App Notification for Admin
         await prisma.notification.create({
             data: {
                 TargetRole: 'Admin',
@@ -184,12 +187,9 @@ export async function addTicketComment(ticketId: string, message: string, imageU
         const ticket = await prisma.repairTicket.findUnique({ where: { TicketID: ticketId } });
         if (ticket) {
             const isFromAdmin = actualUserId === adminUser?.UserID;
-
-            // 1. LINE Notify (Disabled for now)
             const sender = isFromAdmin ? 'แอดมิน' : `สาขา ${ticket.BranchID}`;
-            // await sendLineNotify(`💬 แชทใหม่ในใบงาน #${ticketId.substring(0, 8).toUpperCase()}\nโดย: ${sender}\nข้อความ: ${message}`);
 
-            // 2. In-App Notification to the OTHER party
+            // In-App Notification to the OTHER party
             await prisma.notification.create({
                 data: {
                     TargetRole: isFromAdmin ? 'Branch' : 'Admin',

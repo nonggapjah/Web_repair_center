@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "PowerShell(if \\(\\(Get-ChildItem Development -Force\\).Count -eq 0\\) { \"Development folder is EMPTY\" } else { Get-ChildItem Development -Recurse -Force | ForEach-Object { $_.FullName } })",
-      "PowerShell(Get-ChildItem ticket-system\\\\src -Recurse -Depth 2 -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object | Select-Object Count)"
+      "PowerShell(Get-ChildItem ticket-system\\\\src -Recurse -Depth 2 -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object | Select-Object Count)",
+      "PowerShell(Get-Process | Where-Object { $_.ProcessName -match \"node\" } | Select-Object Id, ProcessName, @{N='Memory\\(MB\\)';E={[math]::Round\\($_.WorkingSet64 / 1MB, 1\\)}} | Format-Table -AutoSize)"
     ]
   }
 }
