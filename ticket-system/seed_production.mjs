@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+const BCRYPT_SALT_ROUNDS = 10;
 
 const branches = [
   { code: '1000', telex: 'vl1000', name: 'SUKHUMVIT 33' },
@@ -63,13 +65,21 @@ async function main() {
         create: { BranchID: b.code, BranchName: b.name },
       });
 
-      // 2. Upsert User
+      // 2. Hash telex BEFORE upsert so Password + PasswordHash stay in sync (BUG-02 fix)
+      const hash = await bcrypt.hash(b.telex, BCRYPT_SALT_ROUNDS);
+
+      // 3. Upsert User — write BOTH Password (legacy) and PasswordHash (current truth)
       await prisma.user.upsert({
         where: { Username: b.code },
-        update: { Password: b.telex, BranchID: branch.BranchID },
+        update: {
+          Password: b.telex,
+          PasswordHash: hash,
+          BranchID: branch.BranchID,
+        },
         create: {
           Username: b.code,
           Password: b.telex,
+          PasswordHash: hash,
           Role: 'User',
           BranchID: branch.BranchID,
         },
@@ -82,26 +92,43 @@ async function main() {
     }
   }
 
-  // Ensure Admin exists
-  try {
-    const adminBranch = await prisma.branch.upsert({
+  // Ensure Admin exists — password from env, no hardcoded default (BUG-03 fix)
+  const adminInitialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+  if (!adminInitialPassword) {
+    console.warn('⚠️  ADMIN_INITIAL_PASSWORD env var not set — skipping admin user seed.');
+    console.warn('   To seed admin, set ADMIN_INITIAL_PASSWORD in .env and re-run.');
+  } else if (adminInitialPassword.length < 12) {
+    console.error('❌ ADMIN_INITIAL_PASSWORD must be at least 12 characters. Skipping admin seed.');
+  } else {
+    try {
+      const adminBranch = await prisma.branch.upsert({
         where: { BranchID: 'HQ' },
         update: { BranchName: 'Headquarters' },
         create: { BranchID: 'HQ', BranchName: 'Headquarters' },
-    });
-    await prisma.user.upsert({
-      where: { Username: 'admin' },
-      update: { Password: 'password123', Role: 'Admin', BranchID: adminBranch.BranchID },
-      create: {
-        Username: 'admin',
-        Password: 'password123',
-        Role: 'Admin',
-        BranchID: adminBranch.BranchID,
-      },
-    });
-    console.log('✅ Ensured admin user exists');
-  } catch (err) {
-    console.error('❌ Failed to seed admin:', err);
+      });
+
+      const adminHash = await bcrypt.hash(adminInitialPassword, BCRYPT_SALT_ROUNDS);
+
+      await prisma.user.upsert({
+        where: { Username: 'admin' },
+        update: {
+          Password: adminInitialPassword,
+          PasswordHash: adminHash,
+          Role: 'Admin',
+          BranchID: adminBranch.BranchID,
+        },
+        create: {
+          Username: 'admin',
+          Password: adminInitialPassword,
+          PasswordHash: adminHash,
+          Role: 'Admin',
+          BranchID: adminBranch.BranchID,
+        },
+      });
+      console.log('✅ Ensured admin user exists (password hashed from ADMIN_INITIAL_PASSWORD)');
+    } catch (err) {
+      console.error('❌ Failed to seed admin:', err);
+    }
   }
 
   console.log(`Seeding finished. Successfully processed ${successCount}/${branches.length} branches.`);

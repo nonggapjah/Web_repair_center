@@ -150,3 +150,173 @@ Per CLAUDE.md Step 0 — Commander Profile Gate: UserProfile.md ไม่มี�
 5. **Commit** Phase 0 + 0.5 changes ผ่าน `/git commit` เมื่อพร้อม
 
 ---
+
+---
+
+## Session 3 — BUG-01 Hotfix + Seed Script Audit (Phase 0.5 Follow-up)
+
+**Date:** 09-05-2026
+**Project:** Web_repair_center
+**Active Persona:** Overseer (HQ) — Mode A coordinating Syndicate (lead) + Monolith
+**Trigger:** Commander manual smoke test → login `1000`/`vl1000` ล้มเหลวบน production-like environment
+
+### AM (Conductor) — Coordination Summary
+
+ตามนโยบาย §6 Debugging Protocol (Instrument-First Rule) — สร้าง BUG-01 ticket ก่อนแตะ code → instrument ด้วย read-only DB inspection → observe → hypothesize → resolve
+
+**Investigation result:** DB ถูกต้อง, bcrypt verify ผ่าน, code ใน main branch ถูกต้อง — **root cause = stale deployment** (เว็บที่ Commander ทดสอบไม่ได้ pull commit `f8ddfbf` ของ Phase 0/0.5) Commander verify บน localhost:3000 → login สำเร็จ
+
+**Critical follow-up:** ระหว่าง investigation อ่าน `seed_production.mjs` เจอ 2 critical issues ที่ Phase 0.5 ดั้งเดิมตกหล่น → สร้าง BUG-02 + BUG-03 + fix code ทันที
+
+### MT (Technologist) — Root Cause Analysis
+
+**BUG-01 — Login Failed (Stale Deployment):**
+- DB state ของ user "1000": Password=`"vl1000"`, PasswordHash=valid bcrypt (60 chars), bcrypt.compare → true
+- Local source code: `auth.ts` dual-mode logic ถูกต้อง
+- Local dev server: ไม่ได้รัน → Commander test environment เป็น deploy ที่อื่น (ยังรันโค้ดเก่า)
+- ไม่ใช่ code bug — เป็น **deployment process gap** (ไม่มี automated rebuild/redeploy หลัง git push)
+
+**BUG-02 — Seed Script Breaks PasswordHash Sync (HIGH):**
+- `seed_production.mjs` upsert: `update: { Password: b.telex }` — เขียน Password แต่ไม่ touch PasswordHash
+- **Timing bomb:** ถ้า telex เปลี่ยน → DB จะมี Password ใหม่ + PasswordHash เก่า → bcrypt.compare(new_pw, old_hash) = false → login พังของทุก user ที่ telex เปลี่ยน
+- Worst case: รหัสที่ admin คิดว่ายกเลิกไปแล้ว ยังใช้ login ได้ผ่าน bcrypt path (silent security issue)
+
+**BUG-03 — Hardcoded Admin Password (CRITICAL):**
+- [seed_production.mjs:94,97] (pre-fix): `Password: 'password123'` — top-100 rockyou password
+- Password อยู่ใน git history → ใครเข้าถึง repo = รู้รหัส admin
+- รวมกับ username `'admin'` ที่เดาง่าย → full admin takeover trivial
+
+### AS (Design & Verification Scholar) — Process Notes
+
+- ✅ Instrument-First Rule ปฏิบัติครบ — เขียน `scripts/inspect_user.ts` (read-only) ก่อน hypothesize
+- ✅ Probe removed per §6 RELEASE rule — `inspect_user.ts` ลบหลัง resolution
+- ✅ Regression test added — `Development/09_TestCase/_regression/auth_dualmode.spec.md` (6 test cases)
+- ✅ BUG-01 documented `## Debug Instrumentation Session` heading ตามมาตรฐาน §6
+- ⚠️ **UX Smoke Test partial** — Commander confirmed TC-01 บน localhost; TC-02..TC-06 ยังต้อง manual run ก่อน production deploy ครั้งหน้า
+- ⚠️ **BUG-03 ยังไม่ closed** — code fix done แต่ critical step (rotate actual admin password ใน DB) ต้อง Commander ดำเนินการเอง
+
+### Architecture Decision (MT) — Documented
+
+**Decision: Seed script becomes single source of truth for password storage**
+- **Why:** Atomic update of Password + PasswordHash ลด state divergence
+- **Trade-off:** Seed script ต้อง depend on bcryptjs (เพิ่ม import) — acceptable
+- **Alternative rejected:** ให้ migrate_passwords.ts รันหลัง seed เสมอ — เพิ่ม step + ต้อง maintain re-hash mode
+- **Phase 0.5d follow-up:** ตอน drop Password column → seed script เขียนแค่ PasswordHash อย่างเดียว
+
+### Code Changes (this session)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Development/Web_repair_center/05_BugFixesLog/AuthLoginBroken_Phase0.5/BUG-01_LoginBroken.md` | NEW | Bug ticket + investigation log + root cause |
+| `Development/Web_repair_center/05_BugFixesLog/AuthLoginBroken_Phase0.5/BUG-02_SeedScriptBreaksPasswordHash.md` | NEW | Follow-up bug ticket |
+| `Development/Web_repair_center/05_BugFixesLog/AuthLoginBroken_Phase0.5/BUG-03_AdminPasswordHardcoded.md` | NEW | Follow-up bug ticket + Commander action items |
+| `Development/Web_repair_center/09_TestCase/_regression/auth_dualmode.spec.md` | NEW | Permanent regression test (Hotfix Gate) |
+| `ticket-system/scripts/inspect_user.ts` | TEMP | Read-only debug probe (created + deleted in same session per §6) |
+| `ticket-system/seed_production.mjs` | MODIFIED | + bcryptjs import, hash telex, write both Password + PasswordHash, env-driven admin |
+| `ticket-system/.env.example` | MODIFIED | + ADMIN_INITIAL_PASSWORD doc |
+
+### Verification
+
+- ✅ `npm run build` ผ่าน — 7 routes generated (Next.js 16.1.6 Turbopack)
+- ✅ `node --check seed_production.mjs` ผ่าน — syntax valid
+- ✅ Commander manual login test on localhost: PASS (user 1000 / vl1000)
+- ✅ DB state verified: user 1000 PasswordHash = bcrypt valid, bcrypt.compare returns true
+
+### Output Delivered
+
+- 3 bug tickets (BUG-01 [x] Complete, BUG-02 [x] Complete code fix, BUG-03 [~] In Progress)
+- 1 regression test (permanent)
+- 2 source files modified (seed_production.mjs, .env.example)
+- 1 temp debug probe (created + deleted)
+- Verified production build still passes
+- Architecture decision logged: seed as SSOT for password storage
+- **Reason:** Commander reported login bug → investigation revealed Phase 0.5 ดั้งเดิมตกหล่น seed script audit → fix prevents future silent failures + secures admin account
+
+### Action Items for Commander (URGENT)
+
+1. **🔴 BUG-03 Step 1 — Rotate admin password ทันที** (instructions ใน `BUG-03_AdminPasswordHardcoded.md`) — รหัส `password123` อยู่ใน git history
+2. **🟡 Redeploy production** environment ที่ Commander test ก่อนหน้านี้ — ดึง commit `f8ddfbf` + ส่วนที่จะ commit เพิ่มของ Session 3 นี้
+3. **🟢 Run TC-02..TC-06** ใน `auth_dualmode.spec.md` ก่อน deploy ครั้งต่อไป
+4. **🟢 Schedule Phase 0.5d** (1-2 สัปดาห์): drop Password column, fix default `"1234"`
+5. **🟢 Schedule Phase 1**: deployment automation (CI/CD), DeploymentRunbook.md, prod smoke test script, npm audit fix, admin dashboard refactor
+
+### Open Discourse — Tech Debt Updated
+
+| # | Issue | Severity | Phase |
+|---|-------|----------|-------|
+| 1 | No CI/CD — manual redeploy required after every push | 🟡 HIGH | Phase 1 |
+| 2 | No DeploymentRunbook.md | 🟡 MEDIUM | Phase 1 |
+| 3 | No prod smoke test script | 🟢 MEDIUM | Phase 1 |
+| 4 | (resolved) — `inspect_user.ts` debug probe removed | ✅ | — |
+| 5 | BUG-03 Step 1 — Commander rotate admin password | 🔴 CRITICAL | Now |
+| 6 | BUG-03 Step 3 — Git history scrub decision | 🟢 MEDIUM | Commander review |
+
+---
+
+---
+
+## Session 4 — BUG-03 Admin Password Rotation Complete
+
+**Date:** 09-05-2026
+**Project:** Web_repair_center
+**Active Persona:** Overseer (HQ) — Mode A coordinating Syndicate
+**Trigger:** Commander chose Option C (custom strong password) for admin rotation
+
+### AM (Conductor) — Coordination Summary
+
+หลัง Commander confirm ว่าผู้ใช้สาขาทั้งหมดต้อง login ด้วย password เดิมได้ (Session 3 verify ผ่าน) — Commander เลือกใช้ Option C สำหรับ admin rotation: รหัสที่ Commander เลือกเองที่ผ่าน strength check
+
+Execution flow:
+1. Set ephemeral env var `ADMIN_INITIAL_PASSWORD` ใน PowerShell session ปัจจุบัน
+2. รัน `node seed_production.mjs` — seed script (post-BUG-02 fix) hash password + write Password+PasswordHash atomic
+3. Clear env var ทันทีหลัง seed เสร็จ
+4. Verify ผ่าน read-only probe — confirmed new password works, old rejected, branch users unaffected
+5. Delete probe per §6 RELEASE rule
+
+### SC (Syndicate Technologist) — Implementation Notes
+
+- **Method choice:** Ephemeral PowerShell env var แทนการเขียนลง `.env` — เหตุผล: ลด attack surface, รหัสไม่ persist ใน file system, ไม่เสี่ยง commit ผิดพลาด
+- **Side effect (planned):** seed_production.mjs upsert ทั้ง 45 branches ด้วย — branch users ได้รับ new bcrypt hash (different salt, same compare result) ผลกระทบ: ไม่มี — branch users ยัง login ด้วย telex เดิมได้
+- **Idempotency confirmed:** ถ้ารัน seed ซ้ำด้วย env เดียวกัน → state เดิม (hash regenerate แต่ functional equivalent)
+
+### WT (Syndicate Verification Scholar) — Verification
+
+| Check | Expected | Actual | Result |
+|-------|----------|--------|--------|
+| Admin Password column = new value | string match | MATCH | PASS |
+| Admin PasswordHash present | not null | YES | PASS |
+| bcrypt.compare(new, hash) | true | true | PASS |
+| bcrypt.compare("password123", hash) | false | false | PASS — old invalidated |
+| Branch user 1000 still works with vl1000 | true | true | PASS — no collateral damage |
+| 45 branches re-seeded successfully | 45/45 | 45/45 | PASS |
+
+### AS (Design & Verification Scholar) — Process Compliance
+
+- ✅ Read-only probe before mutation (§6 Instrument-First Rule)
+- ✅ All probes (`check_admin.ts`, `verify_admin_rotation.ts`) deleted post-resolution
+- ✅ BUG-03 acceptance criteria all checked, ticket marked Complete
+- ✅ Resolution section in ticket documents method + verification + decisions
+- ✅ Branch user passwords confirmed UNCHANGED (Commander concern from start of session resolved)
+
+### Output Delivered
+
+- `ticket-system/seed_production.mjs` — ran with ephemeral env, 45 branches + admin row updated
+- DB state: admin row has new password + valid bcrypt hash; old `password123` rejected
+- BUG-03 ticket updated: Status `[x] Complete`, all 3 steps resolved, Resolution section added
+- 2 debug probes created + deleted (no residual files)
+- **Reason:** Close critical security debt — admin account no longer vulnerable to git history exposure of old `password123`
+
+### Remaining Tech Debt / Action Items
+
+| # | Item | Severity | Owner | Phase |
+|---|------|----------|-------|-------|
+| 1 | Redeploy production to pull Phase 0/0.5/Session 3-4 commits | HIGH | Commander + DevOps | Now |
+| 2 | Setup CI/CD for auto-deploy on main push | HIGH | Syndicate | Phase 1 |
+| 3 | DeploymentRunbook.md | MEDIUM | Monolith | Phase 1 |
+| 4 | Production smoke test script | MEDIUM | Syndicate | Phase 1 |
+| 5 | Phase 0.5d — drop Password column + fix default `"1234"` | MEDIUM | Monolith | 1-2 weeks |
+| 6 | Quarterly admin password rotation schedule | LOW | Overseer | Phase 1 |
+| 7 | npm audit (7 vulnerabilities pending) | MEDIUM | Syndicate | Phase 1 |
+| 8 | admin dashboard 765 LOC near rewrite threshold | MEDIUM | Arcade | Phase 1 |
+
+---
