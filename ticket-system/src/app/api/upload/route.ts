@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
+// เพิ่มการตั้งค่าเพื่อรองรับไฟล์ขนาดใหญ่
+export const config = {
+    api: {
+        bodyParser: false, // ปิดตัวจัดการพื้นฐานเพื่อรองรับไฟล์ใหญ่
+    },
+};
+
+export const maxDuration = 60; // เพิ่มเวลาประมวลผลเป็น 60 วินาที
+
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
