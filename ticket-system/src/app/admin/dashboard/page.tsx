@@ -739,7 +739,16 @@ export default function AdminDashboard() {
                                             }}>{translateStatus(t.CurrentStatus)}</span>
                                         </td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#1e293b' }}>{t.Product || "-"}</td>
-                                        <td style={{ padding: '1rem 1.2rem' }}>{t.Symptom}</td>
+                                        <td style={{ padding: '1rem 1.2rem' }}>
+                                            {t.JobCategory ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontWeight: '800', color: '#4338ca' }}>{t.JobCategory}</span>
+                                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>สาขาระบุ: {t.Symptom}</span>
+                                                </div>
+                                            ) : (
+                                                <span style={{ color: '#475569' }}>{t.Symptom}</span>
+                                            )}
+                                        </td>
                                         <td style={{ padding: '1rem 1.2rem', color: '#475569', fontSize: '0.9rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '700' }}>{formatTechs(t)}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontSize: '0.85rem', color: '#64748b' }}>

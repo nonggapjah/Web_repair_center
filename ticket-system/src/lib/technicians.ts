@@ -11,7 +11,10 @@ export const TECHNICIANS = [
     "ช่างสกล",
     "ช่างเขียด",
     "ช่างประวิท",
-    "ช่างเดี่ยว"
+    "ช่างเดี่ยว",
+    "ช่างอ๊อด",
+    "ช่างต้อม",
+    "ช่างนิมิต"
 ] as const;
 
 export type TechnicianName = typeof TECHNICIANS[number];

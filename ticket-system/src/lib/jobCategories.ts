@@ -12,6 +12,7 @@ export const JOB_CATEGORIES = [
     "ประปา",
     "แอร์",
     "ตู้แช่",
+    "งานเชลฟ์วางสินค้า",
     "ช่างรับเหมา",
     "Request",
     "Supplier",
