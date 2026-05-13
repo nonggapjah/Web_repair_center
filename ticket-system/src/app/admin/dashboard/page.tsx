@@ -1,37 +1,46 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { getAllTickets, updateTicketStatus, addTicketComment } from '@/app/actions/tickets';
+import {
+    getAllTickets,
+    updateTicketStatus,
+    addTicketComment,
+    updateTicketCategory,
+    updateTicketSupplier,
+    assignTechnicians
+} from '@/app/actions/tickets';
 import { supabase } from '@/lib/supabase';
 import { SignatureModal } from '@/components/SignatureModal';
 import HeicViewerModal from '@/components/HeicViewerModal';
+// Phase 2B (12-05-2026): canonical lists moved to @/lib so dashboard, technician
+// portal, and any future surface stay in sync. ARC-11..15 wire-up follows.
+import { TICKET_STATUSES, ADMIN_SELECTABLE_STATUSES, STATUS_TH, STATUS_COLOR } from '@/lib/statuses';
+import { TECHNICIANS } from '@/lib/technicians';
+import { JOB_CATEGORIES, CONTRACTOR_CATEGORY } from '@/lib/jobCategories';
+import { SUPPLIERS, OTHER_SUPPLIER_SENTINEL, requiresSupplier } from '@/lib/suppliers';
 
-const statuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed", "Closed"];
-const adminSelectableStatuses = ["Open", "On Process", "Repairing", "Waiting Parts", "Completed"]; // No 'Closed'
-const technicians = ["ช่างยศ", "ช่างชา", "ช่างต้น", "ช่างปาด", "ช่างสกล", "ช่างเขียด", "ช่างประวิท", "ช่างเดี่ยว", "ทีมช่างรับเหมา"];
+const statuses = TICKET_STATUSES;
+const adminSelectableStatuses = ADMIN_SELECTABLE_STATUSES;
+const technicians = TECHNICIANS;
 
-const translateStatus = (status: string) => {
-    switch (status) {
-        case 'Open': return 'แจ้งซ่อมใหม่';
-        case 'On Process': return 'รับเรื่องแล้ว';
-        case 'Repairing': return 'กำลังเข้าซ่อม';
-        case 'Waiting Parts': return 'รออะไหล่';
-        case 'Completed': return 'ซ่อมเรียบร้อย';
-        case 'Closed': return 'ปิดงานถาวร';
-        default: return status;
-    }
+const translateStatus = (status: string) => STATUS_TH[status as keyof typeof STATUS_TH] ?? status;
+const statusColor = (status: string) => STATUS_COLOR[status as keyof typeof STATUS_COLOR] ?? '#64748b';
+
+// ARC-14: derive technician names from the join table (preferred) and fall back to
+// the legacy comma-joined Technician string for any ticket that hasn't been re-saved
+// since MON-13 dual-write went live. Empty string + "ทีมช่างรับเหมา" are filtered
+// because the contractor sentinel is a JobCategory signal, not a person.
+const getTicketTechs = (t: any): string[] => {
+    const fromRelation = Array.isArray(t?.Technicians)
+        ? t.Technicians.map((tt: any) => tt.TechnicianName).filter((n: string) => !!n && n !== 'ทีมช่างรับเหมา')
+        : [];
+    if (fromRelation.length > 0) return fromRelation;
+    const legacy: string = typeof t?.Technician === 'string' ? t.Technician : '';
+    return legacy.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0 && s !== 'ทีมช่างรับเหมา');
 };
-
-const statusColor = (status: string) => {
-    switch (status) {
-        case 'Open': return '#3b82f6';
-        case 'On Process': return '#8b5cf6';
-        case 'Repairing': return '#f59e0b';
-        case 'Waiting Parts': return '#ef4444';
-        case 'Completed': return '#10b981';
-        case 'Closed': return '#64748b';
-        default: return '#64748b';
-    }
+const formatTechs = (t: any): string => {
+    const techs = getTicketTechs(t);
+    return techs.length > 0 ? techs.join(', ') : '-';
 };
 
 export default function AdminDashboard() {
@@ -40,12 +49,27 @@ export default function AdminDashboard() {
     const [viewMode, setViewMode] = useState<'list' | 'overview'>('overview');
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [techNote, setTechNote] = useState('');
-    const [selectedTech, setSelectedTech] = useState('');
+    // ARC-14 (12-05-2026): selectedTechs replaces single selectedTech. The save flow
+    // calls assignTechnicians() with the full array; updateTicketStatus dual-writes
+    // a comma-joined string for the legacy column.
+    const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
     const [actualDate, setActualDate] = useState('');
     const [pendingStatus, setPendingStatus] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showSignPad, setShowSignPad] = useState(false);
     const [heicUrlToView, setHeicUrlToView] = useState<string | null>(null);
+    // ARC-12 (12-05-2026): inline JobCategory editor state (admin only).
+    const [pendingJobCategory, setPendingJobCategory] = useState<string>('');
+    const [isSavingCategory, setIsSavingCategory] = useState(false);
+    // ARC-15 (12-05-2026): conditional Supplier dropdown state.
+    // pendingSupplier holds either a known SUPPLIERS value or the sentinel "อื่นๆ".
+    // customSupplier holds the free-text input shown when sentinel is selected.
+    const [pendingSupplier, setPendingSupplier] = useState<string>('');
+    const [customSupplier, setCustomSupplier] = useState<string>('');
+    const [isSavingSupplier, setIsSavingSupplier] = useState(false);
+    // ARC-11 (12-05-2026): wrong-category confirm modal toggle.
+    const [showWrongCategoryConfirm, setShowWrongCategoryConfirm] = useState(false);
+    const [isMarkingWrongCategory, setIsMarkingWrongCategory] = useState(false);
 
     // Timeline/Chat states
     const [replyMessage, setReplyMessage] = useState('');
@@ -59,7 +83,10 @@ export default function AdminDashboard() {
     const [filterSymptom, setFilterSymptom] = useState('');
     const [filterBranch, setFilterBranch] = useState('');
     const [filterTechnician, setFilterTechnician] = useState('');
+    const [filterJobCategory, setFilterJobCategory] = useState(''); // ARC-12 filter
     const [searchQuery, setSearchQuery] = useState('');
+    // ARC-11: WrongCategory tickets are hidden by default; toggle reveals them.
+    const [showWrongCategory, setShowWrongCategory] = useState(false);
 
     const getSLAColor = (ticket: any) => {
         if (ticket.CurrentStatus === 'Completed' || ticket.CurrentStatus === 'Closed') {
@@ -142,12 +169,23 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (selectedTicket) {
-            const lastNote = selectedTicket.History && selectedTicket.History.length > 0 ? selectedTicket.History[0].Note : '';
             // setTechNote(lastNote || ''); // Option: do not prefill tech notes so it's only active notes
             setTechNote('');
-            setSelectedTech(selectedTicket.Technician || '');
+            setSelectedTechs(getTicketTechs(selectedTicket));
             setActualDate(selectedTicket.ActualDate ? new Date(selectedTicket.ActualDate).toISOString().split('T')[0] : '');
             setPendingStatus(selectedTicket.CurrentStatus);
+            // ARC-12 + ARC-15: hydrate category & supplier UI state from current row.
+            setPendingJobCategory(selectedTicket.JobCategory || '');
+            const supplierVal = selectedTicket.SupplierName || '';
+            const isKnown = (SUPPLIERS as readonly string[]).includes(supplierVal) && supplierVal !== OTHER_SUPPLIER_SENTINEL;
+            if (supplierVal && !isKnown) {
+                setPendingSupplier(OTHER_SUPPLIER_SENTINEL);
+                setCustomSupplier(supplierVal);
+            } else {
+                setPendingSupplier(supplierVal);
+                setCustomSupplier('');
+            }
+            setShowWrongCategoryConfirm(false);
         } else {
             setReplyMessage('');
             setReplyFiles([]);
@@ -163,17 +201,22 @@ export default function AdminDashboard() {
             const ticketTime = new Date(t.CreatedAt).getTime();
             if (startDate && ticketTime < new Date(startDate).setHours(0, 0, 0, 0)) return false;
             if (endDate && ticketTime > new Date(endDate).setHours(23, 59, 59, 999)) return false;
+            // ARC-11: hide WrongCategory by default; show only when toggled or explicitly filtered to it.
+            if (!showWrongCategory && t.CurrentStatus === 'WrongCategory' && filterStatus !== 'WrongCategory') return false;
             if (filterStatus && t.CurrentStatus !== filterStatus) return false;
             if (filterSymptom && t.Symptom !== filterSymptom) return false;
             if (filterBranch && (t.Branch?.BranchName || t.BranchID) !== filterBranch) return false;
-            if (filterTechnician && t.Technician !== filterTechnician) return false;
+            // ARC-14: tech filter now matches against the join-table set (with legacy fallback via getTicketTechs).
+            if (filterTechnician && !getTicketTechs(t).includes(filterTechnician)) return false;
+            // ARC-12: optional JobCategory filter.
+            if (filterJobCategory && t.JobCategory !== filterJobCategory) return false;
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 return t.TicketID.toLowerCase().includes(q) || (t.Product || '').toLowerCase().includes(q) || (t.Description || '').toLowerCase().includes(q);
             }
             return true;
         });
-    }, [tickets, startDate, endDate, filterStatus, filterSymptom, filterBranch, filterTechnician, searchQuery]);
+    }, [tickets, startDate, endDate, filterStatus, filterSymptom, filterBranch, filterTechnician, filterJobCategory, searchQuery, showWrongCategory]);
 
     const handleSaveUpdate = async (overrideSignature?: string) => {
         if (!selectedTicket || !pendingStatus) return;
@@ -185,32 +228,141 @@ export default function AdminDashboard() {
 
         setShowSignPad(false);
         setIsUpdating(true);
-        
+
         const previousTicket = selectedTicket;
         const currentPendingStatus = pendingStatus;
         const currentTechNote = techNote;
-        const currentSelectedTech = selectedTech;
+        const currentSelectedTechs = [...selectedTechs];
         const currentActualDate = actualDate;
 
-        // Optimistic update - close modal immediately for snappy feeling
+        // Optimistic update — close modal immediately for snappy feeling.
+        // We mirror the new tech array onto BOTH the legacy Technician string AND the
+        // Technicians[] relation so list/detail views render consistently before the
+        // next poll lands the canonical state.
         setTickets(prev => prev.map(t => t.TicketID === previousTicket.TicketID ? {
             ...t,
             CurrentStatus: currentPendingStatus,
-            Technician: currentSelectedTech || t.Technician,
+            Technician: currentSelectedTechs.join(', '),
+            Technicians: currentSelectedTechs.map(name => ({ TechnicianName: name })),
             ActualDate: currentActualDate ? new Date(currentActualDate).toISOString() : t.ActualDate,
             AdminSignature: overrideSignature || t.AdminSignature
         } : t));
         setSelectedTicket(null);
 
         try {
-            await updateTicketStatus(previousTicket.TicketID, currentPendingStatus, currentTechNote, currentSelectedTech, currentActualDate, overrideSignature);
+            await updateTicketStatus(
+                previousTicket.TicketID,
+                currentPendingStatus,
+                currentTechNote,
+                currentSelectedTechs, // ARC-14: pass array; server normalises legacy string + join-table sync
+                currentActualDate,
+                overrideSignature
+            );
             // State will naturally refresh on next polling cycle
-        } catch (err) { 
+        } catch (err) {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
             fetchTickets(); // Revert on failure
-        } finally { 
-            setIsUpdating(false); 
+        } finally {
+            setIsUpdating(false);
         }
+    };
+
+    // ARC-12: persist JobCategory edit. Inline (does not require pressing the main save button).
+    const handleSaveCategory = async (newCategory: string) => {
+        if (!selectedTicket) return;
+        setIsSavingCategory(true);
+        const value = newCategory.trim() === '' ? null : newCategory;
+        const previousValue = selectedTicket.JobCategory ?? null;
+        // Optimistic update
+        setTickets(prev => prev.map(t => t.TicketID === selectedTicket.TicketID
+            ? { ...t, JobCategory: value }
+            : t));
+        setSelectedTicket((prev: any) => prev ? { ...prev, JobCategory: value } : prev);
+        try {
+            const result = await updateTicketCategory(selectedTicket.TicketID, value);
+            if (!result.success) {
+                alert(result.error || 'ไม่สามารถอัปเดตหมวดหมู่ได้');
+                // Revert
+                setPendingJobCategory(previousValue || '');
+                setTickets(prev => prev.map(t => t.TicketID === selectedTicket.TicketID
+                    ? { ...t, JobCategory: previousValue }
+                    : t));
+                setSelectedTicket((prev: any) => prev ? { ...prev, JobCategory: previousValue } : prev);
+            }
+        } catch (err) {
+            console.error('updateTicketCategory error:', err);
+            alert('เกิดข้อผิดพลาดในการบันทึกหมวดหมู่');
+        } finally {
+            setIsSavingCategory(false);
+        }
+    };
+
+    // ARC-15: persist SupplierName edit. Resolves the "อื่นๆ" sentinel to free-text.
+    const handleSaveSupplier = async (raw: string) => {
+        if (!selectedTicket) return;
+        const isOther = raw === OTHER_SUPPLIER_SENTINEL;
+        const value = isOther ? customSupplier.trim() : raw.trim();
+        if (isOther && value === '') {
+            // Wait for the operator to actually type a custom name before saving.
+            return;
+        }
+        setIsSavingSupplier(true);
+        const previousValue = selectedTicket.SupplierName ?? null;
+        const finalValue = value === '' ? null : value;
+        // Optimistic
+        setTickets(prev => prev.map(t => t.TicketID === selectedTicket.TicketID
+            ? { ...t, SupplierName: finalValue }
+            : t));
+        setSelectedTicket((prev: any) => prev ? { ...prev, SupplierName: finalValue } : prev);
+        try {
+            const result = await updateTicketSupplier(selectedTicket.TicketID, finalValue);
+            if (!result.success) {
+                alert(result.error || 'ไม่สามารถอัปเดต supplier ได้');
+                setTickets(prev => prev.map(t => t.TicketID === selectedTicket.TicketID
+                    ? { ...t, SupplierName: previousValue }
+                    : t));
+                setSelectedTicket((prev: any) => prev ? { ...prev, SupplierName: previousValue } : prev);
+            }
+        } catch (err) {
+            console.error('updateTicketSupplier error:', err);
+            alert('เกิดข้อผิดพลาดในการบันทึก supplier');
+        } finally {
+            setIsSavingSupplier(false);
+        }
+    };
+
+    // ARC-11: terminal "WrongCategory" mark — used when admin determines the ticket
+    // doesn't belong to the repair team at all (e.g., IT). Closes the modal on success.
+    const handleMarkWrongCategory = async () => {
+        if (!selectedTicket) return;
+        setIsMarkingWrongCategory(true);
+        const previousTicket = selectedTicket;
+        const noteText = (techNote && techNote.trim().length > 0)
+            ? techNote
+            : 'แจ้งงานผิดประเภท: ไม่ใช่งานช่าง';
+        // Optimistic
+        setTickets(prev => prev.map(t => t.TicketID === previousTicket.TicketID
+            ? { ...t, CurrentStatus: 'WrongCategory' }
+            : t));
+        setSelectedTicket(null);
+        setShowWrongCategoryConfirm(false);
+        try {
+            // Pass undefined for technician so server preserves whatever was already set
+            // (we're flagging classification, not reassigning).
+            await updateTicketStatus(previousTicket.TicketID, 'WrongCategory', noteText);
+        } catch (err) {
+            alert('ไม่สามารถบันทึกสถานะได้ กรุณาลองใหม่');
+            fetchTickets();
+        } finally {
+            setIsMarkingWrongCategory(false);
+        }
+    };
+
+    // ARC-14: chip toggle helper for the multi-select.
+    const toggleTechChip = (name: string) => {
+        setSelectedTechs(prev => prev.includes(name)
+            ? prev.filter(n => n !== name)
+            : [...prev, name]);
     };
 
     const handleAddComment = async () => {
@@ -270,15 +422,18 @@ export default function AdminDashboard() {
     };
 
     const handleExport = () => {
-        const headers = ["TicketID", "Status", "Product", "Category", "Branch", "Tech", "Created", "ActualDate"];
+        // ARC-12/14/15 \u2014 added JobCategory + Supplier columns; Tech now joins the array.
+        const headers = ["TicketID", "Status", "JobCategory", "Supplier", "Product", "Symptom", "Branch", "Techs", "Created", "ActualDate"];
         const csv = ["\uFEFF" + headers.join(",")];
         filteredTickets.forEach(t => csv.push([
             t.TicketID.toUpperCase(),
             translateStatus(t.CurrentStatus),
+            (t.JobCategory || "-").replace(/,/g, " "),
+            (t.SupplierName || "-").replace(/,/g, " "),
             (t.Product || "-").replace(/,/g, " "),
-            t.Symptom,
-            t.Branch?.BranchName || t.BranchID,
-            t.Technician || "-",
+            (t.Symptom || "-").replace(/,/g, " "),
+            (t.Branch?.BranchName || t.BranchID).replace(/,/g, " "),
+            formatTechs(t).replace(/,/g, " | "),
             new Date(t.CreatedAt).toLocaleString('th-TH'),
             t.ActualDate ? new Date(t.ActualDate).toLocaleDateString('th-TH') : "-"
         ].join(",")));
@@ -413,6 +568,35 @@ export default function AdminDashboard() {
                                 <option value="">ทั้งหมด</option>
                                 {technicians.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
+                        </div>
+                        {/* ARC-12: JobCategory filter (admin-curated list) */}
+                        <div>
+                            <label style={{ fontSize: '0.8rem', fontWeight: '900', display: 'block', marginBottom: '0.4rem' }}>หมวดหมู่งาน</label>
+                            <select value={filterJobCategory} onChange={e => setFilterJobCategory(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                                <option value="">ทั้งหมด</option>
+                                {JOB_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                        {/* ARC-11: WrongCategory chip — hidden by default; click to reveal "ไม่ใช่งานช่าง" tickets */}
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowWrongCategory(prev => !prev)}
+                                style={{
+                                    padding: '0.6rem 0.8rem',
+                                    borderRadius: '10px',
+                                    border: `2px solid ${showWrongCategory ? STATUS_COLOR.WrongCategory : '#cbd5e1'}`,
+                                    background: showWrongCategory ? STATUS_COLOR.WrongCategory : '#fff',
+                                    color: showWrongCategory ? '#fff' : '#475569',
+                                    cursor: 'pointer',
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    transition: 'all 0.2s'
+                                }}
+                                title="แสดง/ซ่อนใบงานที่ถูก mark ว่าไม่ใช่งานช่าง"
+                            >
+                                {showWrongCategory ? '🚫 ซ่อน "ไม่ใช่งานช่าง"' : '🚫 แสดง "ไม่ใช่งานช่าง"'}
+                            </button>
                         </div>
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: '900', display: 'block', marginBottom: '0.4rem' }}>จากวันที่แจ้ง</label>
@@ -558,7 +742,7 @@ export default function AdminDashboard() {
                                         <td style={{ padding: '1rem 1.2rem', fontWeight: '800', color: '#1e293b' }}>{t.Product || "-"}</td>
                                         <td style={{ padding: '1rem 1.2rem' }}>{t.Symptom}</td>
                                         <td style={{ padding: '1rem 1.2rem', color: '#475569', fontSize: '0.9rem' }}>{t.Branch?.BranchName || t.BranchID}</td>
-                                        <td style={{ padding: '1rem 1.2rem', fontWeight: '700' }}>{t.Technician || "-"}</td>
+                                        <td style={{ padding: '1rem 1.2rem', fontWeight: '700' }}>{formatTechs(t)}</td>
                                         <td style={{ padding: '1rem 1.2rem', fontSize: '0.85rem', color: '#64748b' }}>
                                             {getLastUpdateInfo(t) ? getLastUpdateInfo(t)?.date.toLocaleString('th-TH', { day: 'numeric', month: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : "-"}
                                         </td>
@@ -588,7 +772,27 @@ export default function AdminDashboard() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                                 <div>
                                     <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.Product || 'ไม่ระบุอุปกรณ์'}</h2>
-                                    <p style={{ color: '#6366f1', fontWeight: '800', marginTop: '0.4rem' }}>หมวดหมู่: {selectedTicket.Symptom}</p>
+                                    {/* ARC-13 (12-05-2026): show branch name in detail popup so admin doesn't have
+                                        to flip back to the list to know whose ticket this is. */}
+                                    <p style={{ color: '#0f766e', fontWeight: '800', marginTop: '0.4rem', fontSize: '0.95rem' }}>
+                                        🏬 สาขา: {selectedTicket.Branch?.BranchName || selectedTicket.BranchID || 'ไม่ระบุสาขา'}
+                                    </p>
+                                    {/* ARC-12: JobCategory now shown here read-only; full editor lives in modal-col-right.
+                                        Symptom (สาขากรอก) shown beneath as the original report. */}
+                                    <p style={{ color: '#6366f1', fontWeight: '800', marginTop: '0.4rem' }}>
+                                        หมวดหมู่: {selectedTicket.JobCategory || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>ยังไม่ระบุ</span>}
+                                    </p>
+                                    {selectedTicket.Symptom && (
+                                        <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                                            สาขากรอกอาการ: <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedTicket.Symptom}</span>
+                                        </p>
+                                    )}
+                                    {/* ARC-15: surface SupplierName when set (admin can edit in right column). */}
+                                    {selectedTicket.SupplierName && (
+                                        <p style={{ color: '#c2410c', fontWeight: '800', marginTop: '0.2rem', fontSize: '0.85rem' }}>
+                                            🏗️ Supplier: {selectedTicket.SupplierName}
+                                        </p>
+                                    )}
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }} className="no-print">
                                     <button onClick={() => window.print()} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>🖨️ ปริ้นใบงาน</button>
@@ -713,12 +917,110 @@ export default function AdminDashboard() {
                             <div style={{ paddingBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
                                 <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', marginBottom: '1.5rem' }}>⚙️ จัดการงานแจ้งซ่อม</h3>
 
+                                {/* ARC-12 (12-05-2026): inline JobCategory editor — admin can re-classify a ticket
+                                    when the branch picked the wrong type. Saves on change (no extra save button). */}
                                 <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>ช่างผู้รับผิดชอบ</label>
-                                    <select value={selectedTech} onChange={e => setSelectedTech(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '700' }}>
-                                        <option value="">-- ระบุช่าง --</option>
-                                        {technicians.map(t => <option key={t} value={t}>{t}</option>)}
+                                    <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>
+                                        หมวดหมู่งาน (admin แก้ไขได้){isSavingCategory && <span style={{ color: '#94a3b8', marginLeft: '0.5rem', fontSize: '0.75rem' }}>กำลังบันทึก…</span>}
+                                    </label>
+                                    <select
+                                        value={pendingJobCategory}
+                                        onChange={e => { const v = e.target.value; setPendingJobCategory(v); handleSaveCategory(v); }}
+                                        style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '700' }}
+                                    >
+                                        <option value="">-- ไม่ระบุ --</option>
+                                        {JOB_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
+                                    {selectedTicket.Symptom && (
+                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                                            สาขากรอกอาการ: <span style={{ color: '#475569', fontWeight: '700' }}>{selectedTicket.Symptom}</span>
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* ARC-15 (12-05-2026): conditional Supplier dropdown — only when JobCategory = "ช่างรับเหมา".
+                                    "อื่นๆ" reveals a free-text input. Save is gated on non-empty custom value. */}
+                                {requiresSupplier(pendingJobCategory) && (
+                                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#fff7ed', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                                        <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#c2410c' }}>
+                                            🏗️ Supplier (จำเป็นสำหรับช่างรับเหมา){isSavingSupplier && <span style={{ color: '#94a3b8', marginLeft: '0.5rem', fontSize: '0.75rem' }}>กำลังบันทึก…</span>}
+                                        </label>
+                                        <select
+                                            value={pendingSupplier}
+                                            onChange={e => {
+                                                const v = e.target.value;
+                                                setPendingSupplier(v);
+                                                if (v !== OTHER_SUPPLIER_SENTINEL) {
+                                                    setCustomSupplier('');
+                                                    handleSaveSupplier(v);
+                                                }
+                                            }}
+                                            style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid #fdba74', background: '#fff', fontWeight: '700' }}
+                                        >
+                                            <option value="">-- เลือก supplier --</option>
+                                            {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                        {pendingSupplier === OTHER_SUPPLIER_SENTINEL && (
+                                            <div style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    value={customSupplier}
+                                                    onChange={e => setCustomSupplier(e.target.value)}
+                                                    placeholder="ระบุชื่อ supplier..."
+                                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '8px', border: '1px solid #fdba74', background: '#fff', fontWeight: '700' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSaveSupplier(OTHER_SUPPLIER_SENTINEL)}
+                                                    disabled={customSupplier.trim() === '' || isSavingSupplier}
+                                                    style={{ padding: '0.6rem 1rem', background: '#ea580c', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: customSupplier.trim() === '' ? 'not-allowed' : 'pointer', opacity: customSupplier.trim() === '' ? 0.5 : 1 }}
+                                                >
+                                                    บันทึก
+                                                </button>
+                                            </div>
+                                        )}
+                                        {selectedTicket.SupplierName && (
+                                            <p style={{ fontSize: '0.75rem', color: '#7c2d12', marginTop: '0.4rem' }}>
+                                                ปัจจุบัน: <span style={{ fontWeight: '900' }}>{selectedTicket.SupplierName}</span>
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ARC-14 (12-05-2026): multi-technician chip selector. "ทีมช่างรับเหมา" intentionally
+                                    NOT in TECHNICIANS — it's a JobCategory above. Tap to toggle. */}
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: '900', fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem', color: '#475569' }}>
+                                        ช่างผู้รับผิดชอบ <span style={{ color: '#94a3b8', fontWeight: '700' }}>(เลือกได้หลายคน)</span>
+                                    </label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                        {technicians.map(t => {
+                                            const active = selectedTechs.includes(t);
+                                            return (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => toggleTechChip(t)}
+                                                    style={{
+                                                        padding: '0.5rem 0.9rem',
+                                                        borderRadius: '9999px',
+                                                        border: `2px solid ${active ? '#1e293b' : '#cbd5e1'}`,
+                                                        background: active ? '#1e293b' : '#fff',
+                                                        color: active ? '#fff' : '#475569',
+                                                        fontWeight: '800',
+                                                        fontSize: '0.8rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                >
+                                                    {active ? '✓ ' : ''}{t}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedTechs.length === 0 && (
+                                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem' }}>ยังไม่มีช่างมอบหมาย — แตะเพื่อเลือก</p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -746,6 +1048,47 @@ export default function AdminDashboard() {
                             <button onClick={() => handleSaveUpdate()} disabled={isUpdating} style={{ marginTop: 'auto', width: '100%', padding: '1.2rem', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
                                 {isUpdating ? 'กำลังบันทึก...' : '💾 อัปเดตงานแจ้งซ่อม'}
                             </button>
+
+                            {/* ARC-11 (12-05-2026): "แจ้งงานผิดประเภท" — terminal mark for tickets that are not
+                                a repair-team job at all (e.g., IT). Hidden once the ticket is already in a
+                                terminal state. Two-step (confirm) to prevent accidental clicks. */}
+                            {selectedTicket.CurrentStatus !== 'WrongCategory' && selectedTicket.CurrentStatus !== 'Closed' && (
+                                <div style={{ borderTop: '1px dashed #fee2e2', paddingTop: '1rem' }}>
+                                    {!showWrongCategoryConfirm ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowWrongCategoryConfirm(true)}
+                                            style={{ width: '100%', padding: '0.8rem', background: '#fff', color: '#b91c1c', border: '2px solid #fca5a5', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}
+                                        >
+                                            🚫 แจ้งงานผิดประเภท (ไม่ใช่งานช่าง)
+                                        </button>
+                                    ) : (
+                                        <div style={{ padding: '1rem', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fca5a5' }}>
+                                            <p style={{ fontSize: '0.85rem', color: '#7f1d1d', fontWeight: '800', marginBottom: '0.8rem' }}>
+                                                ⚠️ งานนี้จะถูก mark ว่า <b>ไม่ใช่งานช่าง</b> และซ่อนจากรายการหลัก สาขาต้องสร้างใบงานใหม่ถ้าต้องการแจ้งซ่อม
+                                            </p>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleMarkWrongCategory}
+                                                    disabled={isMarkingWrongCategory}
+                                                    style={{ flex: 1, padding: '0.7rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}
+                                                >
+                                                    {isMarkingWrongCategory ? 'กำลังบันทึก…' : 'ยืนยัน'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowWrongCategoryConfirm(false)}
+                                                    disabled={isMarkingWrongCategory}
+                                                    style={{ flex: 1, padding: '0.7rem', background: '#fff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}
+                                                >
+                                                    ยกเลิก
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

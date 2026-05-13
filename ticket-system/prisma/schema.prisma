@@ -29,32 +29,59 @@ model User {
 }
 
 model RepairTicket {
-  TicketID       String          @id @default(cuid())
+  TicketID       String             @id @default(cuid())
   UserID         String
-  User           User            @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
+  User           User               @relation(fields: [UserID], references: [UserID], onDelete: NoAction, onUpdate: NoAction)
   BranchID       String
-  Branch         Branch          @relation(fields: [BranchID], references: [BranchID], onDelete: NoAction, onUpdate: NoAction)
+  Branch         Branch             @relation(fields: [BranchID], references: [BranchID], onDelete: NoAction, onUpdate: NoAction)
   Product        String
   Symptom        String
   Description    String?
   ImageURL       String?
-  Priority       String          @default("Medium")
-  CurrentStatus  String          @default("Open")
+  Priority       String             @default("Medium")
+  CurrentStatus  String             @default("Open")
+  // Phase 2B (12-05-2026): JobCategory MON-11 — admin-editable categorization (separate from
+  // free-text Symptom). Predefined list lives in src/lib/jobCategories.ts. NULL for legacy rows.
+  // SupplierName MON-12 — populated only when JobCategory == "ช่างรับเหมา" (validated app-side, not DB).
+  JobCategory    String?
+  SupplierName   String?
   RequestDate    DateTime?
   ActualDate     DateTime?
   SLA_Deadline   DateTime?
   TotalCost      Float?
   CSAT_Score     Int?
+  // MON-13 (12-05-2026): Technician retained TEMPORARILY during 2-phase migration.
+  // Phase 1 (this push): add TicketTechnician join table alongside legacy field.
+  // Phase 2 (after migrate-technicians.mjs verified): drop Technician column.
+  // DO NOT remove this field until scripts/migrate-technicians.mjs has been run AND
+  // row counts verified — premature removal = silent data loss.
   Technician     String?
+  Technicians    TicketTechnician[]
   AdminSignature String?
   UserSignature  String?
-  CreatedAt      DateTime        @default(now())
+  CreatedAt      DateTime           @default(now())
   History        TicketHistory[]
   Comments       TicketComment[]
 
   @@index([BranchID])
-  @@index([Technician])
   @@index([CurrentStatus])
+  @@index([JobCategory])
+  @@index([SupplierName])
+}
+
+// MON-13 (12-05-2026): join table replaces RepairTicket.Technician String? (single-assignment).
+// Cascade delete keeps assignment rows in sync if a ticket is removed. Unique constraint
+// blocks duplicate assignment of same technician to same ticket (idempotent reassign).
+model TicketTechnician {
+  id             String       @id @default(cuid())
+  TicketID       String
+  Ticket         RepairTicket @relation(fields: [TicketID], references: [TicketID], onDelete: Cascade)
+  TechnicianName String
+  AssignedAt     DateTime     @default(now())
+
+  @@unique([TicketID, TechnicianName])
+  @@index([TicketID])
+  @@index([TechnicianName])
 }
 
 model TicketHistory {
