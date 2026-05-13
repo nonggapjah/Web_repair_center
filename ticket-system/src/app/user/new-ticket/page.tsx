@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createTicket } from '@/app/actions/tickets';
-import { supabase } from '@/lib/supabase';
 import { getSession } from '@/app/actions/auth';
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -123,24 +122,22 @@ function NewTicketForm() {
         try {
             let publicUrls: string[] = [];
 
-            for (const file of selectedFiles) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const filePath = `${fileName}`;
+            if (selectedFiles.length > 0) {
+                const formDataUpload = new FormData();
+                selectedFiles.forEach(file => formDataUpload.append('files', file));
 
-                const { error: uploadError } = await supabase.storage
-                    .from('tickets')
-                    .upload(filePath, file);
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formDataUpload,
+                });
 
-                if (uploadError) {
-                    throw new Error('Upload failed: ' + uploadError.message);
+                if (!uploadRes.ok) {
+                    const errorData = await uploadRes.json();
+                    throw new Error(errorData.error || 'Upload failed');
                 }
 
-                const { data } = supabase.storage
-                    .from('tickets')
-                    .getPublicUrl(filePath);
-
-                publicUrls.push(data.publicUrl);
+                const uploadData = await uploadRes.json();
+                publicUrls = uploadData.urls;
             }
 
             // Since product is mandatory in DB but removed from UI, we send an empty string or generic value

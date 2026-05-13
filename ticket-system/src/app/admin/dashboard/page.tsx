@@ -8,7 +8,6 @@ import {
     updateTicketCategory,
     updateTicketSupplier
 } from '@/app/actions/tickets';
-import { supabase } from '@/lib/supabase';
 import { SignatureModal } from '@/components/SignatureModal';
 import HeicViewerModal from '@/components/HeicViewerModal';
 // Phase 2B (12-05-2026): canonical lists moved to @/lib so dashboard, technician
@@ -369,13 +368,13 @@ export default function AdminDashboard() {
         setIsReplying(true);
         try {
             let publicUrls: string[] = [];
-            for (const file of replyFiles) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const { error: uploadError } = await supabase.storage.from('tickets').upload(fileName, file);
-                if (uploadError) throw new Error('Upload failed');
-                const { data } = supabase.storage.from('tickets').getPublicUrl(fileName);
-                publicUrls.push(data.publicUrl);
+            if (replyFiles.length > 0) {
+                const formData = new FormData();
+                replyFiles.forEach(file => formData.append('files', file));
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Upload failed');
+                const data = await res.json();
+                publicUrls = data.urls;
             }
             const finalImageUrl = publicUrls.join(',');
             await addTicketComment(selectedTicket.TicketID, replyMessage, finalImageUrl);
