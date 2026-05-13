@@ -6,8 +6,7 @@ import {
     updateTicketStatus,
     addTicketComment,
     updateTicketCategory,
-    updateTicketSupplier,
-    assignTechnicians
+    updateTicketSupplier
 } from '@/app/actions/tickets';
 import { supabase } from '@/lib/supabase';
 import { SignatureModal } from '@/components/SignatureModal';
@@ -16,7 +15,7 @@ import HeicViewerModal from '@/components/HeicViewerModal';
 // portal, and any future surface stay in sync. ARC-11..15 wire-up follows.
 import { TICKET_STATUSES, ADMIN_SELECTABLE_STATUSES, STATUS_TH, STATUS_COLOR } from '@/lib/statuses';
 import { TECHNICIANS } from '@/lib/technicians';
-import { JOB_CATEGORIES, CONTRACTOR_CATEGORY } from '@/lib/jobCategories';
+import { JOB_CATEGORIES } from '@/lib/jobCategories';
 import { SUPPLIERS, OTHER_SUPPLIER_SENTINEL, requiresSupplier } from '@/lib/suppliers';
 
 const statuses = TICKET_STATUSES;
@@ -913,7 +912,10 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
-                        <div className="modal-col-right" style={{ flex: 0.8, background: '#fff', padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* BUG-04 (13-05-2026): mirror modal-col-left's maxHeight + scroll so the
+                            taller Phase 2B content (JobCategory editor + conditional Supplier card +
+                            multi-tech chips + WrongCategory button) doesn't push the modal past the viewport. */}
+                        <div className="modal-col-right" style={{ flex: 0.8, background: '#fff', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '85vh', overflowY: 'auto' }}>
                             <div style={{ paddingBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
                                 <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', marginBottom: '1.5rem' }}>⚙️ จัดการงานแจ้งซ่อม</h3>
 
