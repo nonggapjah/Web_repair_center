@@ -7,11 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Phase 3 (14-05-2026): table-name unification for Azure Postgres migration.
+// All 9 models pinned to `repair_<entityname>` (lowercase + underscore) via @@map so the
+// same Prisma client works against both Supabase (legacy) and Azure (new) once
+// `ALTER TABLE ... RENAME` lands on Supabase in DBM-02.
 model Branch {
   BranchID   String         @id @default(cuid())
   BranchName String
   Users      User[]
   Tickets    RepairTicket[]
+
+  @@map("repair_branch")
 }
 
 model User {
@@ -25,6 +31,8 @@ model User {
   Tickets      RepairTicket[]
   Comments     TicketComment[]
   CreatedAt    DateTime        @default(now())
+
+  @@map("repair_user")
 }
 
 model RepairTicket {
@@ -66,6 +74,7 @@ model RepairTicket {
   @@index([CurrentStatus])
   @@index([JobCategory])
   @@index([SupplierName])
+  @@map("repair_repairticket")
 }
 
 // MON-13 (12-05-2026): join table replaces RepairTicket.Technician String? (single-assignment).
@@ -81,6 +90,7 @@ model TicketTechnician {
   @@unique([TicketID, TechnicianName])
   @@index([TicketID])
   @@index([TechnicianName])
+  @@map("repair_tickettechnician")
 }
 
 model TicketHistory {
@@ -91,6 +101,8 @@ model TicketHistory {
   UpdatedBy String
   Note      String?
   Timestamp DateTime     @default(now())
+
+  @@map("repair_tickethistory")
 }
 
 model TicketComment {
@@ -102,6 +114,8 @@ model TicketComment {
   Message   String
   ImageURL  String?
   Timestamp DateTime     @default(now())
+
+  @@map("repair_ticketcomment")
 }
 
 model Notification {
@@ -113,6 +127,8 @@ model Notification {
   TicketID   String?
   IsRead     Boolean  @default(false)
   CreatedAt  DateTime @default(now())
+
+  @@map("repair_notification")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -141,6 +157,7 @@ model AuditLog {
   @@index([Action])
   @@index([EntityType, EntityID])
   @@index([Timestamp])
+  @@map("repair_auditlog")
 }
 
 model FailedLoginAttempt {
@@ -150,4 +167,5 @@ model FailedLoginAttempt {
   AttemptedAt DateTime @default(now())
 
   @@index([Username, AttemptedAt]) // composite — hottest read path for windowed-count rate-limit queries
+  @@map("repair_failedloginattempt")
 }
