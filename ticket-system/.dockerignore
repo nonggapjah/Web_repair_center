@@ -1,0 +1,46 @@
+# Phase 3 / MON-14 (14-05-2026) — keep build context lean.
+# Anything listed here is excluded from `docker build` context, so it never
+# gets copied into any image stage. Saves time and avoids leaking dev-only files.
+
+# Build artifacts (rebuilt inside container)
+node_modules
+.next
+out
+dist
+*.tsbuildinfo
+
+# Local env / secrets — App Service injects these at runtime, NEVER bake into image
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.*.local
+
+# Source control + editor metadata
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# Dev-only scratch and one-off scripts
+scratch
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker artifacts (recursive prevention)
+Dockerfile
+.dockerignore
+
+# Test artifacts
+coverage
+.nyc_output
+
+# OS / misc
+Thumbs.db

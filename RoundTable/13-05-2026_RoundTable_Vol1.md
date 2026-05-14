@@ -387,3 +387,15 @@ version. M5 (24-48h drift observation) will catch any production-driven divergen
 - Schedule M6 cutover after 24-48h clean drift
 
 ---
+
+## Session 13 Web_repair_center — How to View [DUAL-WRITE] Logs in Vercel
+
+**Commander Prompt:** "ดู log filter [DUAL-WRITE] ยังไง"
+
+### AM Reply Summary
+Vercel logs accessible via 2 paths: Dashboard (UI) or CLI. Filter string = `[DUAL-WRITE]`
+(literal, square brackets included). Empty result = healthy mirror; entries = something
+to investigate. NOTE: no entries will appear until env vars set + redeploy + admin
+performs a write that mutates a table.
+
+---

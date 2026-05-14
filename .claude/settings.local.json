@@ -3,7 +3,10 @@
     "allow": [
       "PowerShell(if \\(\\(Get-ChildItem Development -Force\\).Count -eq 0\\) { \"Development folder is EMPTY\" } else { Get-ChildItem Development -Recurse -Force | ForEach-Object { $_.FullName } })",
       "PowerShell(Get-ChildItem ticket-system\\\\src -Recurse -Depth 2 -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object | Select-Object Count)",
-      "PowerShell(Get-Process | Where-Object { $_.ProcessName -match \"node\" } | Select-Object Id, ProcessName, @{N='Memory\\(MB\\)';E={[math]::Round\\($_.WorkingSet64 / 1MB, 1\\)}} | Format-Table -AutoSize)"
+      "PowerShell(Get-Process | Where-Object { $_.ProcessName -match \"node\" } | Select-Object Id, ProcessName, @{N='Memory\\(MB\\)';E={[math]::Round\\($_.WorkingSet64 / 1MB, 1\\)}} | Format-Table -AutoSize)",
+      "PowerShell(Set-Location c:\\\\Web_repair_center\\\\ticket-system; $env:AZURE_DATABASE_URL='postgresql://admdatamanager:Vi%40%212026Dev%25%2A%21@pgsql-db-manager.postgres.database.azure.com:5432/postgres?sslmode=require'; node -e \"const { PrismaClient } = require\\('@prisma/client'\\); const p = new PrismaClient\\({ datasources: { db: { url: process.env.AZURE_DATABASE_URL } } }\\); p.`$queryRaw``SELECT 1 as ok``.then\\(r => { console.log\\('OK:', r\\); return p.`$disconnect\\(\\); }\\).catch\\(e => { console.error\\('FAIL:', e.message.split\\('\\\\n'\\)[0]\\); process.exit\\(1\\); }\\);\")",
+      "PowerShell(Get-Process -Name 'Docker Desktop','com.docker.backend' -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process git,git-remote-https -ErrorAction SilentlyContinue | Select-Object Name,Id,@{n='CPU\\(s\\)';e={$_.CPU}},@{n='WorkingSet\\(MB\\)';e={[math]::Round\\($_.WorkingSet64/1MB,1\\)}} | Format-Table -AutoSize)"
     ]
   }
 }

@@ -94,8 +94,16 @@ All 9 production tables (Phase 0 + Phase 2A + Phase 2B):
 | 6 | Cutover: flip Vercel DATABASE_URL → Azure (read traffic) | Brief flicker | 10 min |
 | 7 | Disable dual-write extension | Zero | 10 min |
 | 8 | Retire Supabase as primary (keep as warm spare 30 days) | Zero | passive |
+| **9**  | Dockerfile + .dockerignore + local docker build verification | Zero | 30 min |
+| **10** | Mirror push GitHub → Azure DevOps Repos (history preserved) | Zero | 15 min |
+| **11** | Build & push image to ACR `villarepair.azurecr.io` | Zero | 30 min |
+| **12** | Provision Azure App Service for Containers + env vars (Azure DB) | Zero | 45 min |
+| **13** | Staging smoke test on `*.azurewebsites.net` (login, ticket create, admin save) | Zero | 60 min |
+| **14** | Final M3 re-sync + cutover (pause Vercel, App Service rises) | ~2 min flicker | 15 min |
 
-**Today's session = Milestones 1-4. Milestones 5-8 = follow-up sessions.**
+**Scope expansion (D+0, 14-05-2026):** Commander confirmed full-stack migration off Vercel/GitHub onto Azure (Q1 = App Service for Containers; Q2 = within 1 week; Q3 = Azure URL first; Q4 = dual-write OFF during transition). Milestones 5-8 are de-scoped — replaced by M9-M14. Dual-write is being turned OFF, so M5 drift observation is moot. M14 includes a final Supabase→Azure re-sync run before cutover to capture all rows written during the migration week.
+
+**Today's session = Milestones 1-4. M9-M14 = this week (target cutover D+6, 20-05-2026).**
 
 ## 5. Ticket Index
 
@@ -108,7 +116,14 @@ All 9 production tables (Phase 0 + Phase 2A + Phase 2B):
 | **DBM-05** | Dual-write Prisma extension + env flag | 4 | [x] COMPLETE (deploy ready, awaiting Vercel env activation) |
 | **DBM-06** | 24-48hr drift observation script | 5 | [ ] PENDING (next session) |
 | **DBM-07** | Vercel DATABASE_URL cutover to Azure | 6 | [ ] PENDING (next session) |
-| **DBM-08** | Disable dual-write + decommission Supabase primary | 7-8 | [ ] PENDING (next session) |
+| **DBM-08** | Disable dual-write + decommission Supabase primary | 7-8 | [>] DEFERRED — superseded by MON-15+MON-19 (full-stack migration changed cutover path) |
+| **MON-14** | Dockerfile + .dockerignore (Next.js standalone, multi-stage Node 20-alpine) | 9 | [ ] PENDING |
+| **MON-15** | Local docker build + run verification | 9 | [ ] PENDING |
+| **MON-16** | Add Azure DevOps remote + initial mirror push | 10 | [ ] PENDING |
+| **MON-17** | Build image + push to ACR `villarepair.azurecr.io` (admin auth via az CLI) | 11 | [ ] PENDING |
+| **MON-18** | Provision App Service for Containers (Linux, B1+, Southeast Asia) + env vars | 12 | [ ] PENDING |
+| **MON-19** | Staging smoke test on `*.azurewebsites.net` URL — full feature pass | 13 | [ ] PENDING |
+| **MON-20** | Final Supabase→Azure re-sync + Vercel pause + App Service cutover | 14 | [ ] PENDING |
 
 ## 6. Test Plan (Verification Scholar AS)
 
