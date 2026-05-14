@@ -126,24 +126,12 @@ function NewTicketForm() {
             for (const file of selectedFiles) {
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const filePath = `${fileName}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('tickets')
-                    .upload(filePath, file);
-
-                if (uploadError) {
-                    throw new Error('Upload failed: ' + uploadError.message);
-                }
-
-                const { data } = supabase.storage
-                    .from('tickets')
-                    .getPublicUrl(filePath);
-
+                const { error: uploadError } = await supabase.storage.from('tickets').upload(fileName, file);
+                if (uploadError) throw new Error('Upload failed');
+                const { data } = supabase.storage.from('tickets').getPublicUrl(fileName);
                 publicUrls.push(data.publicUrl);
             }
 
-            // Since product is mandatory in DB but removed from UI, we send an empty string or generic value
             const finalData = {
                 ...formData,
                 product: formData.product === 'อื่นๆ' ? `อื่นๆ: ${otherProductName}` : formData.product,
